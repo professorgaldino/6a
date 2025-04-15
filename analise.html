@@ -6,46 +6,26 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
-      font-family: 'Arial', sans-serif;
+      font-family: Arial, sans-serif;
       padding: 20px;
-      background-color: #f4f4f9;
-      color: #333;
-      margin: 0;
+      background-color: #f9f9f9;
     }
     h1 {
-      color: #2c3e50;
-      text-align: center;
-      font-size: 2rem;
-      margin-top: 20px;
-    }
-    .header {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 30px;
-    }
-    .header img {
-      width: 120px;
-      height: auto;
-      margin-right: 20px;
+      color: #333;
     }
     select {
-      padding: 10px;
+      padding: 5px;
       font-size: 16px;
       margin-top: 10px;
-      border: 2px solid #3498db;
-      border-radius: 5px;
-      background-color: #fff;
     }
     #mensagem {
       margin-top: 20px;
       color: red;
       font-weight: bold;
-      text-align: center;
     }
     #grafico-container {
       max-width: 900px;
-      margin: 0 auto;
+      margin-top: 40px;
       background-color: white;
       padding: 20px;
       border-radius: 10px;
@@ -58,65 +38,55 @@
       background-color: white;
       border-radius: 8px;
       overflow: hidden;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     }
     th, td {
-      border: 1px solid #ddd;
-      padding: 10px;
-      text-align: left;
+      border: 1px solid #ccc;
+      padding: 12px 15px;
+      text-align: center;
+      font-size: 14px;
     }
     th {
-      background-color: #3498db;
+      background-color: #4CAF50;
       color: white;
+      font-weight: bold;
     }
-    tr:nth-child(even) {
+    td {
       background-color: #f9f9f9;
+    }
+    tr:nth-child(even) td {
+      background-color: #f1f1f1;
+    }
+    tr:hover td {
+      background-color: #f0f8ff;
     }
     h2 {
       margin-top: 40px;
-      color: #2c3e50;
     }
-    footer {
-      text-align: center;
-      margin-top: 50px;
-      font-size: 14px;
-      color: #7f8c8d;
+    .table-container {
+      margin-top: 40px;
     }
   </style>
 </head>
 <body>
 
-  <!-- Cabeçalho com logo -->
-  <div class="header">
-    <img src="logoescola.jpeg" alt="Logo da Escola">
-    <h1>Dashboard de Notas por Bimestre</h1>
-  </div>
+  <h1>Dashboard de Notas</h1>
 
-  <!-- Seleção de bimestre -->
-  <div style="text-align: center;">
-    <label for="bimestre">Selecione o bimestre:</label>
-    <select id="bimestre">
-      <option value="1">1º Bimestre</option>
-      <option value="2">2º Bimestre</option>
-      <option value="3">3º Bimestre</option>
-      <option value="4">4º Bimestre</option>
-    </select>
-  </div>
+  <label for="bimestre">Selecione o bimestre:</label>
+  <select id="bimestre">
+    <option value="1">1º Bimestre</option>
+    <option value="2">2º Bimestre</option>
+    <option value="3">3º Bimestre</option>
+    <option value="4">4º Bimestre</option>
+  </select>
 
   <p id="mensagem"></p>
 
-  <!-- Gráfico de Notas -->
   <div id="grafico-container">
     <canvas id="graficoNotas"></canvas>
   </div>
 
-  <!-- Tabelas de Notas Vermelhas e Alunos Sem Nota -->
-  <div id="tabela-container"></div>
-
-  <!-- Rodapé -->
-  <footer>
-    <p>&copy; 2025 Escola Therezinha Villani - Todos os direitos reservados.</p>
-  </footer>
+  <div id="tabela-container" class="table-container"></div>
 
   <script>
     const chartCanvas = document.getElementById('graficoNotas');
@@ -283,13 +253,11 @@
       } else {
         html += '<h2>Alunos com Notas Vermelhas</h2>';
         html += '<table>';
-        html += '<tr><th>Aluno</th><th>Disciplina</th><th>Nota</th></tr>';
+        html += '<tr><th>Aluno</th><th>Disciplinas com Nota < 5</th></tr>';
 
         for (const aluno in vermelhasPorAluno) {
           const disciplinas = vermelhasPorAluno[aluno];
-          html += `<tr><td>${aluno}</td>`;
-          html += `<td>${disciplinas.join(', ')}</td>`;
-          html += '</tr>';
+          html += `<tr><td>${aluno}</td><td>${disciplinas.join(', ')}</td></tr>`;
         }
 
         html += '</table>';
@@ -310,13 +278,11 @@
       } else {
         html += '<h2>Alunos Sem Nota Lançada</h2>';
         html += '<table>';
-        html += '<tr><th>Aluno</th><th>Disciplina(s)</th></tr>';
+        html += '<tr><th>Aluno</th><th>Disciplinas Sem Nota</th></tr>';
 
         for (const aluno in semNotaPorAluno) {
           const disciplinas = semNotaPorAluno[aluno];
-          html += `<tr><td>${aluno}</td>`;
-          html += `<td>${disciplinas.join(', ')}</td>`;
-          html += '</tr>';
+          html += `<tr><td>${aluno}</td><td>${disciplinas.join(', ')}</td></tr>`;
         }
 
         html += '</table>';
