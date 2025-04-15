@@ -69,8 +69,23 @@
         const alunos = await alunosRes.json();
 
         const analise = {};
+        const todasDisciplinas = new Set();
         let encontrouNota = false;
 
+        // Primeiro, identificamos TODAS as disciplinas possíveis
+        for (const id in dados) {
+          const disciplinas = dados[id];
+          for (const disc in disciplinas) {
+            todasDisciplinas.add(disc);
+          }
+        }
+
+        // Inicializamos o objeto analise com todas as disciplinas
+        todasDisciplinas.forEach(disc => {
+          analise[disc] = { boas: 0, ruins: 0 };
+        });
+
+        // Agora fazemos a contagem de notas
         for (const id in dados) {
           const aluno = alunos[id];
           if (!aluno) continue;
@@ -83,8 +98,6 @@
 
             encontrouNota = true;
 
-            if (!analise[disc]) analise[disc] = { boas: 0, ruins: 0 };
-
             if (nota >= 5) {
               analise[disc].boas++;
             } else {
@@ -93,10 +106,14 @@
           }
         }
 
-        if (!encontrouNota) {
-          mensagem.textContent = 'Não há dados disponíveis para este bimestre.';
+        if (todasDisciplinas.size === 0) {
+          mensagem.textContent = 'Não há disciplinas disponíveis neste bimestre.';
           if (graficoNotas) graficoNotas.destroy();
           return;
+        }
+
+        if (!encontrouNota) {
+          mensagem.textContent = 'Nenhuma nota lançada neste bimestre. As disciplinas aparecerão zeradas.';
         } else {
           mensagem.textContent = '';
         }
