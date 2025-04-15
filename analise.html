@@ -249,16 +249,32 @@
         html += '</table>';
       }
 
-      // Tabela de alunos sem nota
+      // Agrupar disciplinas sem nota por aluno
+      const semNotaPorAluno = {};
+      semNotas.forEach(item => {
+        if (!semNotaPorAluno[item.aluno]) {
+          semNotaPorAluno[item.aluno] = [];
+        }
+        semNotaPorAluno[item.aluno].push(item.disciplina);
+      });
+
+      // Tabela de alunos sem nota lançada
       if (semNotas.length === 0) {
         html += '<p><em>Todos os alunos têm notas lançadas.</em></p>';
       } else {
         html += '<h2>Alunos Sem Nota Lançada</h2>';
         html += '<table>';
-        html += '<tr><th>Aluno</th><th>Disciplina</th></tr>';
-        semNotas.forEach(item => {
-          html += `<tr><td>${item.aluno}</td><td>${item.disciplina}</td></tr>`;
-        });
+        html += '<tr><th>Aluno</th><th>Disciplina 1</th><th>Disciplina 2</th><th>Disciplina 3</th><th>Disciplina 4</th></tr>';
+
+        for (const aluno in semNotaPorAluno) {
+          const disciplinas = semNotaPorAluno[aluno];
+          html += `<tr><td>${aluno}</td>`;
+          for (let i = 0; i < 4; i++) {
+            html += `<td>${disciplinas[i] || ''}</td>`;
+          }
+          html += `</tr>`;
+        }
+
         html += '</table>';
       }
 
