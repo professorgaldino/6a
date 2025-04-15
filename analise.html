@@ -31,6 +31,20 @@
       border-radius: 10px;
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 30px;
+      background-color: white;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: left;
+    }
+    th {
+      background-color: #eee;
+    }
   </style>
 </head>
 <body>
@@ -51,13 +65,17 @@
     <canvas id="graficoNotas"></canvas>
   </div>
 
+  <div id="tabela-container"></div>
+
   <script>
     const chartCanvas = document.getElementById('graficoNotas');
+    const tabelaContainer = document.getElementById('tabela-container');
     let graficoNotas = null;
 
     async function carregarDados(bimestre) {
       const mensagem = document.getElementById('mensagem');
       mensagem.textContent = 'Carregando...';
+      tabelaContainer.innerHTML = '';
 
       try {
         const [dadosRes, alunosRes] = await Promise.all([
@@ -70,9 +88,9 @@
 
         const analise = {};
         const todasDisciplinas = new Set();
+        const notasVermelhas = [];
         let encontrouNota = false;
 
-        // Primeiro, identificamos TODAS as disciplinas possíveis
         for (const id in dados) {
           const disciplinas = dados[id];
           for (const disc in disciplinas) {
@@ -80,12 +98,10 @@
           }
         }
 
-        // Inicializamos o objeto analise com todas as disciplinas
         todasDisciplinas.forEach(disc => {
           analise[disc] = { boas: 0, ruins: 0 };
         });
 
-        // Agora fazemos a contagem de notas
         for (const id in dados) {
           const aluno = alunos[id];
           if (!aluno) continue;
@@ -102,6 +118,11 @@
               analise[disc].boas++;
             } else {
               analise[disc].ruins++;
+              notasVermelhas.push({
+                aluno: aluno.nome,
+                disciplina: disc,
+                nota: nota.toFixed(1)
+              });
             }
           }
         }
@@ -119,6 +140,7 @@
         }
 
         atualizarGrafico(analise);
+        gerarTabela(notasVermelhas);
       } catch (error) {
         mensagem.textContent = 'Erro ao carregar os dados.';
         console.error(error);
@@ -180,11 +202,32 @@
       });
     }
 
+    function gerarTabela(notas) {
+      if (notas.length === 0) {
+        tabelaContainer.innerHTML = '<p><em>Nenhum aluno com nota vermelha neste bimestre.</em></p>';
+        return;
+      }
+
+      let html = '<h2>Alunos com Notas Vermelhas</h2>';
+      html += '<table>';
+      html += '<tr><th>Aluno</th><th>Disciplina</th><th>Nota</th></tr>';
+
+      notas.forEach(item => {
+        html += `<tr>
+          <td>${item.aluno}</td>
+          <td>${item.disciplina}</td>
+          <td>${item.nota}</td>
+        </tr>`;
+      });
+
+      html += '</table>';
+      tabelaContainer.innerHTML = html;
+    }
+
     document.getElementById('bimestre').addEventListener('change', e => {
       carregarDados(e.target.value);
     });
 
-    // Carrega o 1º bimestre por padrão
     carregarDados(1);
   </script>
 
