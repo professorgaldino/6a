@@ -45,6 +45,9 @@
     th {
       background-color: #eee;
     }
+    h2 {
+      margin-top: 40px;
+    }
   </style>
 </head>
 <body>
@@ -89,6 +92,7 @@
         const analise = {};
         const todasDisciplinas = new Set();
         const notasVermelhas = [];
+        const semNotas = [];
         let encontrouNota = false;
 
         for (const id in dados) {
@@ -99,7 +103,7 @@
         }
 
         todasDisciplinas.forEach(disc => {
-          analise[disc] = { boas: 0, ruins: 0 };
+          analise[disc] = { boas: 0, ruins: 0, semnota: 0 };
         });
 
         for (const id in dados) {
@@ -107,10 +111,15 @@
           if (!aluno) continue;
 
           const disciplinas = dados[id];
-          for (const disc in disciplinas) {
-            const notaStr = disciplinas[disc].notas[bimestre - 1];
+          todasDisciplinas.forEach(disc => {
+            const notaStr = disciplinas?.[disc]?.notas?.[bimestre - 1];
             const nota = parseFloat(notaStr);
-            if (isNaN(nota)) continue;
+
+            if (notaStr === '-' || notaStr === undefined || isNaN(nota)) {
+              analise[disc].semnota++;
+              semNotas.push({ aluno: aluno.nome, disciplina: disc });
+              return;
+            }
 
             encontrouNota = true;
 
@@ -124,7 +133,7 @@
                 nota: nota.toFixed(1)
               });
             }
-          }
+          });
         }
 
         if (todasDisciplinas.size === 0) {
@@ -140,7 +149,7 @@
         }
 
         atualizarGrafico(analise);
-        gerarTabela(notasVermelhas);
+        gerarTabelas(notasVermelhas, semNotas);
       } catch (error) {
         mensagem.textContent = 'Erro ao carregar os dados.';
         console.error(error);
@@ -152,6 +161,7 @@
       const labels = Object.keys(analise);
       const boas = labels.map(d => analise[d].boas);
       const ruins = labels.map(d => analise[d].ruins);
+      const semnota = labels.map(d => analise[d].semnota);
 
       if (graficoNotas) graficoNotas.destroy();
 
@@ -169,6 +179,11 @@
               label: 'Notas < 5 (Vermelhas)',
               data: ruins,
               backgroundColor: 'red'
+            },
+            {
+              label: 'Sem Nota',
+              data: semnota,
+              backgroundColor: 'gray'
             }
           ]
         },
@@ -202,25 +217,51 @@
       });
     }
 
-    function gerarTabela(notas) {
-      if (notas.length === 0) {
-        tabelaContainer.innerHTML = '<p><em>Nenhum aluno com nota vermelha neste bimestre.</em></p>';
-        return;
-      }
+    function gerarTabelas(notas, semNotas) {
+      let html = '';
 
-      let html = '<h2>Alunos com Notas Vermelhas</h2>';
-      html += '<table>';
-      html += '<tr><th>Aluno</th><th>Disciplina</th><th>Nota</th></tr>';
-
+      // Agrupar disciplinas com notas vermelhas por aluno
+      const vermelhasPorAluno = {};
       notas.forEach(item => {
-        html += `<tr>
-          <td>${item.aluno}</td>
-          <td>${item.disciplina}</td>
-          <td>${item.nota}</td>
-        </tr>`;
+        if (!vermelhasPorAluno[item.aluno]) {
+          vermelhasPorAluno[item.aluno] = [];
+        }
+        vermelhasPorAluno[item.aluno].push(`${item.disciplina} (${item.nota})`);
       });
 
-      html += '</table>';
+      // Tabela de notas vermelhas
+      if (notas.length === 0) {
+        html += '<p><em>Nenhum aluno com nota vermelha neste bimestre.</em></p>';
+      } else {
+        html += '<h2>Alunos com Notas Vermelhas</h2>';
+        html += '<table>';
+        html += '<tr><th>Aluno</th><th>Nota 1</th><th>Nota 2</th><th>Nota 3</th><th>Nota 4</th></tr>';
+
+        for (const aluno in vermelhasPorAluno) {
+          const disciplinas = vermelhasPorAluno[aluno];
+          html += `<tr><td>${aluno}</td>`;
+          for (let i = 0; i < 4; i++) {
+            html += `<td>${disciplinas[i] || ''}</td>`;
+          }
+          html += `</tr>`;
+        }
+
+        html += '</table>';
+      }
+
+      // Tabela de alunos sem nota
+      if (semNotas.length === 0) {
+        html += '<p><em>Todos os alunos têm notas lançadas.</em></p>';
+      } else {
+        html += '<h2>Alunos Sem Nota Lançada</h2>';
+        html += '<table>';
+        html += '<tr><th>Aluno</th><th>Disciplina</th></tr>';
+        semNotas.forEach(item => {
+          html += `<tr><td>${item.aluno}</td><td>${item.disciplina}</td></tr>`;
+        });
+        html += '</table>';
+      }
+
       tabelaContainer.innerHTML = html;
     }
 
