@@ -5,11 +5,36 @@
   <title>Dashboard de Notas por Bimestre</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; }
-    #grafico-container { max-width: 900px; margin-top: 40px; }
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background-color: #f9f9f9;
+    }
+    h1 {
+      color: #333;
+    }
+    select {
+      padding: 5px;
+      font-size: 16px;
+      margin-top: 10px;
+    }
+    #mensagem {
+      margin-top: 20px;
+      color: red;
+      font-weight: bold;
+    }
+    #grafico-container {
+      max-width: 900px;
+      margin-top: 40px;
+      background-color: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
   </style>
 </head>
 <body>
+
   <h1>Dashboard de Notas</h1>
 
   <label for="bimestre">Selecione o bimestre:</label>
@@ -20,6 +45,8 @@
     <option value="4">4º Bimestre</option>
   </select>
 
+  <p id="mensagem"></p>
+
   <div id="grafico-container">
     <canvas id="graficoNotas"></canvas>
   </div>
@@ -29,36 +56,57 @@
     let graficoNotas = null;
 
     async function carregarDados(bimestre) {
-      const [dadosRes, alunosRes] = await Promise.all([
-        fetch(`dados${bimestre}.json`),
-        fetch(`alunos.json`)
-      ]);
+      const mensagem = document.getElementById('mensagem');
+      mensagem.textContent = 'Carregando...';
 
-      const dados = await dadosRes.json();
-      const alunos = await alunosRes.json();
+      try {
+        const [dadosRes, alunosRes] = await Promise.all([
+          fetch(`dados${bimestre}.json`),
+          fetch(`alunos.json`)
+        ]);
 
-      const analise = {};
+        const dados = await dadosRes.json();
+        const alunos = await alunosRes.json();
 
-      for (const id in dados) {
-        const aluno = alunos[id];
-        if (!aluno) continue;
+        const analise = {};
+        let encontrouNota = false;
 
-        const disciplinas = dados[id];
-        for (const disc in disciplinas) {
-          const nota = parseFloat(disciplinas[disc].notas[bimestre - 1]);
-          if (isNaN(nota)) continue;
+        for (const id in dados) {
+          const aluno = alunos[id];
+          if (!aluno) continue;
 
-          if (!analise[disc]) analise[disc] = { boas: 0, ruins: 0 };
+          const disciplinas = dados[id];
+          for (const disc in disciplinas) {
+            const notaStr = disciplinas[disc].notas[bimestre - 1];
+            const nota = parseFloat(notaStr);
+            if (isNaN(nota)) continue;
 
-          if (nota >= 5) {
-            analise[disc].boas++;
-          } else {
-            analise[disc].ruins++;
+            encontrouNota = true;
+
+            if (!analise[disc]) analise[disc] = { boas: 0, ruins: 0 };
+
+            if (nota >= 5) {
+              analise[disc].boas++;
+            } else {
+              analise[disc].ruins++;
+            }
           }
         }
-      }
 
-      atualizarGrafico(analise);
+        if (!encontrouNota) {
+          mensagem.textContent = 'Não há dados disponíveis para este bimestre.';
+          if (graficoNotas) graficoNotas.destroy();
+          return;
+        } else {
+          mensagem.textContent = '';
+        }
+
+        atualizarGrafico(analise);
+      } catch (error) {
+        mensagem.textContent = 'Erro ao carregar os dados.';
+        console.error(error);
+        if (graficoNotas) graficoNotas.destroy();
+      }
     }
 
     function atualizarGrafico(analise) {
@@ -74,12 +122,12 @@
           labels: labels,
           datasets: [
             {
-              label: 'Notas ≥ 5',
+              label: 'Notas ≥ 5 (Satisfatórias)',
               data: boas,
               backgroundColor: 'green'
             },
             {
-              label: 'Notas < 5',
+              label: 'Notas < 5 (Vermelhas)',
               data: ruins,
               backgroundColor: 'red'
             }
@@ -88,8 +136,28 @@
         options: {
           responsive: true,
           scales: {
-            y: { beginAtZero: true, title: { display: true, text: 'Quantidade de Alunos' } },
-            x: { title: { display: true, text: 'Disciplinas' } }
+            y: {
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: 'Quantidade de Alunos'
+              }
+            },
+            x: {
+              title: {
+                display: true,
+                text: 'Disciplinas'
+              }
+            }
+          },
+          plugins: {
+            legend: {
+              position: 'top'
+            },
+            title: {
+              display: true,
+              text: 'Análise de Notas por Disciplina'
+            }
           }
         }
       });
@@ -99,8 +167,9 @@
       carregarDados(e.target.value);
     });
 
-    // Inicializa com o 1º bimestre
+    // Carrega o 1º bimestre por padrão
     carregarDados(1);
   </script>
+
 </body>
 </html>
