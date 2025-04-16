@@ -47,16 +47,13 @@
     }
 
     .tabela-wrapper {
-      max-width: 100%;
       overflow-x: auto;
       border: 1px solid #ccc;
       border-radius: 8px;
     }
 
     table {
-      width: max-content;
       border-collapse: collapse;
-      margin-top: 10px;
       background-color: white;
       table-layout: auto;
     }
@@ -72,7 +69,14 @@
       background-color: #e8f1ff;
       position: sticky;
       top: 0;
-      z-index: 1;
+      z-index: 2;
+    }
+
+    td:first-child, th:first-child {
+      position: sticky;
+      left: 0;
+      background-color: #f0f0f0;
+      z-index: 3;
     }
 
     #botao-pdf {
@@ -276,6 +280,7 @@
         'Projeto de Vida', 'Redação e Leitura', 'Tecnologia e Inovação'
       ];
 
+      // Tabela Notas Vermelhas
       html += '<div class="table-section">';
       html += '<h2>Alunos com Notas Vermelhas</h2>';
       html += '<div class="tabela-wrapper"><table>';
@@ -293,6 +298,7 @@
 
       html += '</tbody></table></div></div>';
 
+      // Tabela Sem Notas
       const semNotaPorAluno = {};
       semNotas.forEach(item => {
         if (!semNotaPorAluno[item.aluno]) {
@@ -311,7 +317,7 @@
       Object.keys(semNotaPorAluno).forEach(aluno => {
         html += `<tr><td>${aluno}</td>`;
         disciplinas.forEach(d => {
-          html += `<td>${semNotaPorAluno[aluno][d] ? '—' : ''}</td>`;
+          html += `<td>${semNotaPorAluno[aluno][d] ? 'Sem Nota' : ''}</td>`;
         });
         html += '</tr>';
       });
@@ -324,7 +330,6 @@
     function gerarPDF() {
       const { jsPDF } = window.jspdf;
       const dataHora = new Date().toLocaleString('pt-BR').replace(/[/:]/g, "-");
-
       const tabelas = tabelaContainer.querySelectorAll('.table-section');
 
       tabelas.forEach((section) => {
