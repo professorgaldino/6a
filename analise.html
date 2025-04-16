@@ -10,49 +10,108 @@
       padding: 20px;
       background-color: #f9f9f9;
     }
+
     h1 {
       color: #333;
     }
-    select {
-      padding: 5px;
-      font-size: 16px;
-      margin-top: 10px;
+
+    h2 {
+      color: #007BFF;
     }
+
+    select, button {
+      padding: 8px;
+      font-size: 16px;
+      margin: 10px 10px 20px 0;
+    }
+
     #mensagem {
       margin-top: 20px;
       color: red;
       font-weight: bold;
     }
+
     #grafico-container {
-      max-width: 900px;
-      margin-top: 40px;
+      max-width: 1000px;
+      height: 500px;
       background-color: white;
       padding: 20px;
       border-radius: 10px;
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      margin-bottom: 40px;
     }
+
+    .table-section {
+      margin-bottom: 50px;
+    }
+
+    .tabela-wrapper {
+      overflow-x: auto;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
+
     table {
-      width: 100%;
       border-collapse: collapse;
-      margin-top: 30px;
       background-color: white;
+      table-layout: auto;
     }
+
     th, td {
       border: 1px solid #ccc;
-      padding: 8px;
+      padding: 8px 12px;
       text-align: left;
+      white-space: nowrap;
     }
+
     th {
-      background-color: #eee;
+      background-color: #e8f1ff;
+      position: sticky;
+      top: 0;
+      z-index: 2;
     }
-    h2 {
-      margin-top: 40px;
+
+    td:first-child, th:first-child {
+      position: sticky;
+      left: 0;
+      background-color: #f0f0f0;
+      z-index: 3;
     }
+
+    #logo-escola {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: 100px;
+      height: auto;
+    }
+
+    #sala-button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 16px;
+      background-color: #007BFF;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    #sala-button:hover {
+      background-color: #0056b3;
+    }
+
   </style>
 </head>
 <body>
 
   <h1>Dashboard de Notas</h1>
+
+  <!-- Logo da Escola no canto superior direito -->
+  <img id="logo-escola" src="logoescola.jpeg" alt="Logo da Escola">
+
+  <!-- Botão para abrir a sala do boletim -->
+  <button id="sala-button" onclick="window.location.href='https://professorgaldino.github.io/6a/'">Acessar Sala do Boletim</button>
 
   <label for="bimestre">Selecione o bimestre:</label>
   <select id="bimestre">
@@ -65,7 +124,7 @@
   <p id="mensagem"></p>
 
   <div id="grafico-container">
-    <canvas id="graficoNotas"></canvas>
+    <canvas id="graficoNotas" style="width: 100%; height: 100%;"></canvas>
   </div>
 
   <div id="tabela-container"></div>
@@ -81,6 +140,7 @@
       tabelaContainer.innerHTML = '';
 
       try {
+        // Carrega os dados do bimestre selecionado
         const [dadosRes, alunosRes] = await Promise.all([
           fetch(`dados${bimestre}.json`),
           fetch(`alunos.json`)
@@ -95,6 +155,7 @@
         const semNotas = [];
         let encontrouNota = false;
 
+        // Coleta as disciplinas dinamicamente a partir dos dados do bimestre
         for (const id in dados) {
           const disciplinas = dados[id];
           for (const disc in disciplinas) {
@@ -106,6 +167,7 @@
           analise[disc] = { boas: 0, ruins: 0, semnota: 0 };
         });
 
+        // Analisa as notas dos alunos
         for (const id in dados) {
           const aluno = alunos[id];
           if (!aluno) continue;
@@ -136,6 +198,7 @@
           });
         }
 
+        // Verifica se há disciplinas para exibir
         if (todasDisciplinas.size === 0) {
           mensagem.textContent = 'Não há disciplinas disponíveis neste bimestre.';
           if (graficoNotas) graficoNotas.destroy();
@@ -143,7 +206,7 @@
         }
 
         if (!encontrouNota) {
-          mensagem.textContent = 'Nenhuma nota lançada neste bimestre. As disciplinas aparecerão zeradas.';
+          mensagem.textContent = 'Nenhuma nota lançada neste bimestre.';
         } else {
           mensagem.textContent = '';
         }
@@ -173,7 +236,7 @@
             {
               label: 'Notas ≥ 5 (Satisfatórias)',
               data: boas,
-              backgroundColor: 'green'
+              backgroundColor: 'blue'
             },
             {
               label: 'Notas < 5 (Vermelhas)',
@@ -189,6 +252,7 @@
         },
         options: {
           responsive: true,
+          maintainAspectRatio: false,
           scales: {
             y: {
               beginAtZero: true,
@@ -220,63 +284,59 @@
     function gerarTabelas(notas, semNotas) {
       let html = '';
 
-      // Agrupar disciplinas com notas vermelhas por aluno
       const vermelhasPorAluno = {};
       notas.forEach(item => {
         if (!vermelhasPorAluno[item.aluno]) {
-          vermelhasPorAluno[item.aluno] = [];
+          vermelhasPorAluno[item.aluno] = {};
         }
-        vermelhasPorAluno[item.aluno].push(`${item.disciplina} (${item.nota})`);
+        vermelhasPorAluno[item.aluno][item.disciplina] = item.nota;
       });
 
-      // Tabela de notas vermelhas
-      if (notas.length === 0) {
-        html += '<p><em>Nenhum aluno com nota vermelha neste bimestre.</em></p>';
-      } else {
-        html += '<h2>Alunos com Notas Vermelhas</h2>';
-        html += '<table>';
-        html += '<tr><th>Aluno</th><th>Nota 1</th><th>Nota 2</th><th>Nota 3</th><th>Nota 4</th></tr>';
+      const disciplinas = Array.from(todasDisciplinas);
 
-        for (const aluno in vermelhasPorAluno) {
-          const disciplinas = vermelhasPorAluno[aluno];
-          html += `<tr><td>${aluno}</td>`;
-          for (let i = 0; i < 4; i++) {
-            html += `<td>${disciplinas[i] || ''}</td>`;
-          }
-          html += `</tr>`;
-        }
+      // Tabela Notas Vermelhas
+      html += '<div class="table-section">';
+      html += '<h2>Alunos com Notas Vermelhas</h2>';
+      html += '<div class="tabela-wrapper"><table>';
+      html += '<thead><tr><th>Aluno</th>';
+      disciplinas.forEach(d => html += `<th>${d}</th>`);
+      html += '</tr></thead><tbody>';
 
-        html += '</table>';
-      }
+      Object.keys(vermelhasPorAluno).forEach(aluno => {
+        html += `<tr><td>${aluno}</td>`;
+        disciplinas.forEach(d => {
+          html += `<td>${vermelhasPorAluno[aluno][d] || ''}</td>`;
+        });
+        html += '</tr>';
+      });
 
-      // Agrupar disciplinas sem nota por aluno
+      html += '</tbody></table></div></div>';
+
+      // Tabela Sem Notas
       const semNotaPorAluno = {};
       semNotas.forEach(item => {
         if (!semNotaPorAluno[item.aluno]) {
-          semNotaPorAluno[item.aluno] = [];
+          semNotaPorAluno[item.aluno] = {};
         }
-        semNotaPorAluno[item.aluno].push(item.disciplina);
+        semNotaPorAluno[item.aluno][item.disciplina] = true;
       });
 
-      // Tabela de alunos sem nota lançada
-      if (semNotas.length === 0) {
-        html += '<p><em>Todos os alunos têm notas lançadas.</em></p>';
-      } else {
-        html += '<h2>Alunos Sem Nota Lançada</h2>';
-        html += '<table>';
-        html += '<tr><th>Aluno</th><th>Disciplina 1</th><th>Disciplina 2</th><th>Disciplina 3</th><th>Disciplina 4</th></tr>';
+      html += '<div class="table-section">';
+      html += '<h2>Alunos Sem Nota Lançada</h2>';
+      html += '<div class="tabela-wrapper"><table>';
+      html += '<thead><tr><th>Aluno</th>';
+      disciplinas.forEach(d => html += `<th>${d}</th>`);
+      html += '</tr></thead><tbody>';
 
-        for (const aluno in semNotaPorAluno) {
-          const disciplinas = semNotaPorAluno[aluno];
-          html += `<tr><td>${aluno}</td>`;
-          for (let i = 0; i < 4; i++) {
-            html += `<td>${disciplinas[i] || ''}</td>`;
-          }
-          html += `</tr>`;
-        }
+      Object.keys(semNotaPorAluno).forEach(aluno => {
+        html += `<tr><td>${aluno}</td>`;
+        disciplinas.forEach(d => {
+          html += `<td>${semNotaPorAluno[aluno][d] ? 'Sem Nota' : ''}</td>`;
+        });
+        html += '</tr>';
+      });
 
-        html += '</table>';
-      }
+      html += '</tbody></table></div></div>';
 
       tabelaContainer.innerHTML = html;
     }
