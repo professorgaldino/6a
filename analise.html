@@ -10,66 +10,64 @@
       padding: 20px;
       background-color: #f9f9f9;
     }
+
     h1 {
       color: #333;
     }
+
     select {
       padding: 5px;
       font-size: 16px;
       margin-top: 10px;
     }
+
     #mensagem {
       margin-top: 20px;
       color: red;
       font-weight: bold;
     }
+
     #grafico-container {
-      max-width: 900px;
+      width: 100%;
       margin-top: 40px;
       background-color: white;
       padding: 20px;
       border-radius: 10px;
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
-    #logotipo {
-      width: 180px;
-      display: block;
-      margin-bottom: 20px;
+
+    canvas#graficoNotas {
+      width: 100% !important;
+      height: 500px !important;
     }
+
     table {
       width: 100%;
       border-collapse: collapse;
       margin-top: 30px;
       background-color: white;
-      border-radius: 8px;
-      overflow: hidden;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     }
+
     th, td {
       border: 1px solid #ccc;
-      padding: 10px;
-      text-align: center;
-      font-size: 14px;
+      padding: 8px;
+      text-align: left;
     }
+
     th {
-      background-color: #007BFF;
-      color: white;
+      background-color: #eee;
     }
-    tr:nth-child(even) {
-      background-color: #f2f2f2;
-    }
-    tr:hover {
-      background-color: #e0f3ff;
-    }
-    h2 {
+
+    h2.titulo-tabela {
       margin-top: 40px;
       color: #007BFF;
+      font-size: 20px;
+      border-bottom: 2px solid #007BFF;
+      padding-bottom: 5px;
     }
   </style>
 </head>
 <body>
-
-  <img id="logotipo" src="logoescola.jpeg" alt="Logotipo da Escola">
 
   <h1>Dashboard de Notas</h1>
 
@@ -168,7 +166,7 @@
         }
 
         atualizarGrafico(analise);
-        gerarTabelas(notasVermelhas, semNotas);
+        gerarTabelas(notasVermelhas, semNotas, [...todasDisciplinas]);
       } catch (error) {
         mensagem.textContent = 'Erro ao carregar os dados.';
         console.error(error);
@@ -192,7 +190,7 @@
             {
               label: 'Notas ≥ 5 (Satisfatórias)',
               data: boas,
-              backgroundColor: 'green'
+              backgroundColor: 'blue'
             },
             {
               label: 'Notas < 5 (Vermelhas)',
@@ -236,66 +234,67 @@
       });
     }
 
-    function gerarTabelas(notas, semNotas) {
+    function gerarTabelas(notas, semNotas, disciplinas) {
       let html = '';
 
-      const disciplinasSet = new Set();
-      notas.forEach(item => disciplinasSet.add(item.disciplina));
-      semNotas.forEach(item => disciplinasSet.add(item.disciplina));
-      const disciplinas = Array.from(disciplinasSet).sort();
+      const disciplinasOrdenadas = disciplinas.sort();
+
+      // Tabela de notas vermelhas
+      const vermelhasPorAluno = {};
+      notas.forEach(item => {
+        if (!vermelhasPorAluno[item.aluno]) {
+          vermelhasPorAluno[item.aluno] = {};
+        }
+        vermelhasPorAluno[item.aluno][item.disciplina] = item.nota;
+      });
 
       if (notas.length === 0) {
-        html += '<h2>Alunos com Notas Vermelhas</h2>';
         html += '<p><em>Nenhum aluno com nota vermelha neste bimestre.</em></p>';
       } else {
-        html += '<h2>Alunos com Notas Vermelhas</h2>';
-        html += '<table>';
-        html += '<tr><th>Aluno</th>';
-        disciplinas.forEach(d => html += `<th>${d}</th>`);
-        html += '</tr>';
-
-        const agrupado = {};
-        notas.forEach(({ aluno, disciplina, nota }) => {
-          if (!agrupado[aluno]) agrupado[aluno] = {};
-          agrupado[aluno][disciplina] = nota;
+        html += '<h2 class="titulo-tabela">Notas Vermelhas por Aluno e Disciplina</h2>';
+        html += '<table><thead><tr><th>Aluno</th>';
+        disciplinasOrdenadas.forEach(d => {
+          html += `<th>${d}</th>`;
         });
+        html += '</tr></thead><tbody>';
 
-        for (const aluno in agrupado) {
+        for (const aluno in vermelhasPorAluno) {
           html += `<tr><td>${aluno}</td>`;
-          disciplinas.forEach(d => {
-            html += `<td>${agrupado[aluno][d] || ''}</td>`;
+          disciplinasOrdenadas.forEach(d => {
+            html += `<td>${vermelhasPorAluno[aluno][d] || ''}</td>`;
           });
-          html += `</tr>`;
+          html += '</tr>';
         }
-
-        html += '</table>';
+        html += '</tbody></table>';
       }
 
+      // Tabela de alunos sem nota lançada
+      const semNotaPorAluno = {};
+      semNotas.forEach(item => {
+        if (!semNotaPorAluno[item.aluno]) {
+          semNotaPorAluno[item.aluno] = {};
+        }
+        semNotaPorAluno[item.aluno][item.disciplina] = true;
+      });
+
       if (semNotas.length === 0) {
-        html += '<h2>Alunos Sem Nota</h2>';
         html += '<p><em>Todos os alunos têm notas lançadas.</em></p>';
       } else {
-        html += '<h2>Alunos Sem Nota</h2>';
-        html += '<table>';
-        html += '<tr><th>Aluno</th>';
-        disciplinas.forEach(d => html += `<th>${d}</th>`);
-        html += '</tr>';
-
-        const agrupadoSemNota = {};
-        semNotas.forEach(({ aluno, disciplina }) => {
-          if (!agrupadoSemNota[aluno]) agrupadoSemNota[aluno] = {};
-          agrupadoSemNota[aluno][disciplina] = 'Sem Nota';
+        html += '<h2 class="titulo-tabela">Disciplinas Sem Nota por Aluno</h2>';
+        html += '<table><thead><tr><th>Aluno</th>';
+        disciplinasOrdenadas.forEach(d => {
+          html += `<th>${d}</th>`;
         });
+        html += '</tr></thead><tbody>';
 
-        for (const aluno in agrupadoSemNota) {
+        for (const aluno in semNotaPorAluno) {
           html += `<tr><td>${aluno}</td>`;
-          disciplinas.forEach(d => {
-            html += `<td>${agrupadoSemNota[aluno][d] || ''}</td>`;
+          disciplinasOrdenadas.forEach(d => {
+            html += `<td>${semNotaPorAluno[aluno][d] ? '—' : ''}</td>`;
           });
-          html += `</tr>`;
+          html += '</tr>';
         }
-
-        html += '</table>';
+        html += '</tbody></table>';
       }
 
       tabelaContainer.innerHTML = html;
