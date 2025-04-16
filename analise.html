@@ -8,7 +8,8 @@
     body {
       font-family: Arial, sans-serif;
       padding: 20px;
-      background-color: #f9f9f9;
+      background-color: #e0f7fa; /* Fundo azul claro */
+      margin: 0;
     }
     h1 {
       color: #333;
@@ -48,11 +49,30 @@
     h2 {
       margin-top: 40px;
     }
+    #logo {
+      position: absolute;
+      top: 10px;
+      right: 20px;
+      max-width: 150px;
+      opacity: 0.7;
+    }
+    #voltarBtn {
+      margin-top: 30px;
+      padding: 10px 20px;
+      background-color: #00796b;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    #voltarBtn:hover {
+      background-color: #004d40;
+    }
   </style>
 </head>
 <body>
-  
-  <img src="logoescola.jpeg" alt="Logo da Escola" style="max-width: 200px; margin-bottom: 20px;">
+
+  <img id="logo" src="logoescola.jpeg" alt="Logo da Escola">
 
   <h1>Dashboard de Notas</h1>
 
@@ -71,6 +91,8 @@
   </div>
 
   <div id="tabela-container"></div>
+
+  <button id="voltarBtn" onclick="window.location.href='index.html';">Voltar à Sala</button>
 
   <script>
     const chartCanvas = document.getElementById('graficoNotas');
@@ -222,7 +244,6 @@
     function gerarTabelas(notas, semNotas) {
       let html = '';
 
-      // Agrupar disciplinas com notas vermelhas por aluno
       const vermelhasPorAluno = {};
       notas.forEach(item => {
         if (!vermelhasPorAluno[item.aluno]) {
@@ -231,7 +252,6 @@
         vermelhasPorAluno[item.aluno].push(`${item.disciplina} (${item.nota})`);
       });
 
-      // Tabela de notas vermelhas
       if (notas.length === 0) {
         html += '<p><em>Nenhum aluno com nota vermelha neste bimestre.</em></p>';
       } else {
@@ -251,7 +271,6 @@
         html += '</table>';
       }
 
-      // Agrupar disciplinas sem nota por aluno
       const semNotaPorAluno = {};
       semNotas.forEach(item => {
         if (!semNotaPorAluno[item.aluno]) {
@@ -260,7 +279,6 @@
         semNotaPorAluno[item.aluno].push(item.disciplina);
       });
 
-      // Tabela de alunos sem nota lançada
       if (semNotas.length === 0) {
         html += '<p><em>Todos os alunos têm notas lançadas.</em></p>';
       } else {
