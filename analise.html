@@ -111,6 +111,7 @@
       tabelaContainer.innerHTML = '';
 
       try {
+        // Carrega os dados do bimestre selecionado
         const [dadosRes, alunosRes] = await Promise.all([
           fetch(`dados${bimestre}.json`),
           fetch(`alunos.json`)
@@ -125,7 +126,7 @@
         const semNotas = [];
         let encontrouNota = false;
 
-        // Coleta as disciplinas dinamicamente dos dados carregados
+        // Coleta as disciplinas dinamicamente a partir dos dados do bimestre
         for (const id in dados) {
           const disciplinas = dados[id];
           for (const disc in disciplinas) {
@@ -137,6 +138,7 @@
           analise[disc] = { boas: 0, ruins: 0, semnota: 0 };
         });
 
+        // Analisa as notas dos alunos
         for (const id in dados) {
           const aluno = alunos[id];
           if (!aluno) continue;
@@ -167,6 +169,7 @@
           });
         }
 
+        // Verifica se há disciplinas para exibir
         if (todasDisciplinas.size === 0) {
           mensagem.textContent = 'Não há disciplinas disponíveis neste bimestre.';
           if (graficoNotas) graficoNotas.destroy();
