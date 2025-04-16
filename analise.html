@@ -9,7 +9,6 @@
       font-family: Arial, sans-serif;
       padding: 20px;
       background-color: #f9f9f9;
-      position: relative;
     }
     h1 {
       color: #333;
@@ -49,32 +48,9 @@
     h2 {
       margin-top: 40px;
     }
-    /* Logo no canto superior direito */
-    #logo {
-      position: absolute;
-      top: 10px;
-      right: 20px;
-      width: 100px;
-    }
-    /* Estilo do botão */
-    #botaoSala {
-      background-color: #4CAF50;
-      color: white;
-      padding: 10px 20px;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      margin-top: 20px;
-    }
-    #botaoSala:hover {
-      background-color: #45a049;
-    }
   </style>
 </head>
 <body>
-
-  <!-- Logo no canto superior direito -->
-  <img src="logoescola.jpeg" alt="Logo da Escola" id="logo">
 
   <h1>Dashboard de Notas</h1>
 
@@ -93,11 +69,6 @@
   </div>
 
   <div id="tabela-container"></div>
-
-  <!-- Botão para redirecionamento -->
-  <a href="https://professorgaldino.github.io/6a/">
-    <button id="botaoSala">Acessar Sala</button>
-  </a>
 
   <script>
     const chartCanvas = document.getElementById('graficoNotas');
@@ -248,7 +219,7 @@
 
     function gerarTabelas(notas, semNotas) {
       let html = '';
-      
+
       // Agrupar disciplinas com notas vermelhas por aluno
       const vermelhasPorAluno = {};
       notas.forEach(item => {
