@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Dashboard de Notas por Bimestre</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -13,6 +14,13 @@
 
     h1 {
       color: #333;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    img#logo {
+      height: 60px;
     }
 
     select {
@@ -28,7 +36,7 @@
     }
 
     #grafico-container {
-      width: 100%;
+      max-width: 100%;
       margin-top: 40px;
       background-color: white;
       padding: 20px;
@@ -36,40 +44,73 @@
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
 
-    canvas#graficoNotas {
-      width: 100% !important;
-      height: 500px !important;
+    canvas {
+      height: 400px !important;
+    }
+
+    button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 14px;
+      cursor: pointer;
+      background-color: #007BFF;
+      color: white;
+      border: none;
+      border-radius: 5px;
+    }
+
+    .table-section {
+      margin-top: 40px;
+    }
+
+    .table-section h2 {
+      color: #007BFF;
+    }
+
+    .table-scroll-wrapper {
+      overflow: auto;
+      max-height: 400px;
+      border: 1px solid #ddd;
+      background-color: white;
     }
 
     table {
-      width: 100%;
       border-collapse: collapse;
-      margin-top: 30px;
-      background-color: white;
+      min-width: max-content;
+      width: 100%;
     }
 
     th, td {
       border: 1px solid #ccc;
       padding: 8px;
       text-align: left;
+      white-space: nowrap;
     }
 
-    th {
-      background-color: #eee;
+    thead th {
+      position: sticky;
+      top: 0;
+      background-color: #007BFF;
+      color: white;
+      z-index: 2;
     }
 
-    h2.titulo-tabela {
-      margin-top: 40px;
-      color: #007BFF;
-      font-size: 20px;
-      border-bottom: 2px solid #007BFF;
-      padding-bottom: 5px;
+    th:first-child,
+    td:first-child {
+      position: sticky;
+      left: 0;
+      background-color: #f0f0f0;
+      font-weight: bold;
+      z-index: 1;
     }
   </style>
 </head>
 <body>
 
-  <h1>Dashboard de Notas</h1>
+  <h1>
+    Dashboard de Notas
+    <img id="logo" src="logoescola.jpeg" alt="Logo da Escola">
+  </h1>
 
   <label for="bimestre">Selecione o bimestre:</label>
   <select id="bimestre">
@@ -85,7 +126,9 @@
     <canvas id="graficoNotas"></canvas>
   </div>
 
-  <div id="tabela-container"></div>
+  <button onclick="gerarPDF()">Gerar PDF</button>
+
+  <div id="tabela-container" class="table-section"></div>
 
   <script>
     const chartCanvas = document.getElementById('graficoNotas');
@@ -159,14 +202,10 @@
           return;
         }
 
-        if (!encontrouNota) {
-          mensagem.textContent = 'Nenhuma nota lançada neste bimestre. As disciplinas aparecerão zeradas.';
-        } else {
-          mensagem.textContent = '';
-        }
+        mensagem.textContent = encontrouNota ? '' : 'Nenhuma nota lançada neste bimestre. As disciplinas aparecerão zeradas.';
 
         atualizarGrafico(analise);
-        gerarTabelas(notasVermelhas, semNotas, [...todasDisciplinas]);
+        gerarTabelas(notasVermelhas, semNotas, Array.from(todasDisciplinas));
       } catch (error) {
         mensagem.textContent = 'Erro ao carregar os dados.';
         console.error(error);
@@ -206,6 +245,7 @@
         },
         options: {
           responsive: true,
+          maintainAspectRatio: false,
           scales: {
             y: {
               beginAtZero: true,
@@ -235,11 +275,6 @@
     }
 
     function gerarTabelas(notas, semNotas, disciplinas) {
-      let html = '';
-
-      const disciplinasOrdenadas = disciplinas.sort();
-
-      // Tabela de notas vermelhas
       const vermelhasPorAluno = {};
       notas.forEach(item => {
         if (!vermelhasPorAluno[item.aluno]) {
@@ -248,56 +283,63 @@
         vermelhasPorAluno[item.aluno][item.disciplina] = item.nota;
       });
 
-      if (notas.length === 0) {
-        html += '<p><em>Nenhum aluno com nota vermelha neste bimestre.</em></p>';
-      } else {
-        html += '<h2 class="titulo-tabela">Notas Vermelhas por Aluno e Disciplina</h2>';
-        html += '<table><thead><tr><th>Aluno</th>';
-        disciplinasOrdenadas.forEach(d => {
-          html += `<th>${d}</th>`;
-        });
-        html += '</tr></thead><tbody>';
-
-        for (const aluno in vermelhasPorAluno) {
-          html += `<tr><td>${aluno}</td>`;
-          disciplinasOrdenadas.forEach(d => {
-            html += `<td>${vermelhasPorAluno[aluno][d] || ''}</td>`;
-          });
-          html += '</tr>';
-        }
-        html += '</tbody></table>';
-      }
-
-      // Tabela de alunos sem nota lançada
       const semNotaPorAluno = {};
       semNotas.forEach(item => {
         if (!semNotaPorAluno[item.aluno]) {
           semNotaPorAluno[item.aluno] = {};
         }
-        semNotaPorAluno[item.aluno][item.disciplina] = true;
+        semNotaPorAluno[item.aluno][item.disciplina] = '—';
       });
 
-      if (semNotas.length === 0) {
-        html += '<p><em>Todos os alunos têm notas lançadas.</em></p>';
-      } else {
-        html += '<h2 class="titulo-tabela">Disciplinas Sem Nota por Aluno</h2>';
-        html += '<table><thead><tr><th>Aluno</th>';
-        disciplinasOrdenadas.forEach(d => {
-          html += `<th>${d}</th>`;
-        });
-        html += '</tr></thead><tbody>';
+      let html = '';
 
-        for (const aluno in semNotaPorAluno) {
-          html += `<tr><td>${aluno}</td>`;
-          disciplinasOrdenadas.forEach(d => {
-            html += `<td>${semNotaPorAluno[aluno][d] ? '—' : ''}</td>`;
-          });
-          html += '</tr>';
-        }
-        html += '</tbody></table>';
-      }
+      // Tabela Notas Vermelhas
+      html += `<div class="table-section"><h2>Notas Vermelhas</h2><div class="table-scroll-wrapper"><table><thead><tr><th>Aluno</th>`;
+      disciplinas.forEach(d => html += `<th>${d}</th>`);
+      html += `</tr></thead><tbody>`;
+
+      Object.keys(vermelhasPorAluno).forEach(aluno => {
+        html += `<tr><td>${aluno}</td>`;
+        disciplinas.forEach(d => {
+          html += `<td>${vermelhasPorAluno[aluno][d] || ''}</td>`;
+        });
+        html += `</tr>`;
+      });
+
+      html += `</tbody></table></div></div>`;
+
+      // Tabela Sem Nota
+      html += `<div class="table-section"><h2>Sem Nota Lançada</h2><div class="table-scroll-wrapper"><table><thead><tr><th>Aluno</th>`;
+      disciplinas.forEach(d => html += `<th>${d}</th>`);
+      html += `</tr></thead><tbody>`;
+
+      Object.keys(semNotaPorAluno).forEach(aluno => {
+        html += `<tr><td>${aluno}</td>`;
+        disciplinas.forEach(d => {
+          html += `<td>${semNotaPorAluno[aluno][d] || ''}</td>`;
+        });
+        html += `</tr>`;
+      });
+
+      html += `</tbody></table></div></div>`;
 
       tabelaContainer.innerHTML = html;
+    }
+
+    function gerarPDF() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      const dataHora = new Date().toLocaleString('pt-BR');
+
+      doc.text("Relatório de Notas - Gerado em " + dataHora, 10, 10);
+      doc.html(tabelaContainer, {
+        callback: function (doc) {
+          doc.save(`RelatorioNotas_${dataHora.replace(/[/:]/g, "-")}.pdf`);
+        },
+        x: 10,
+        y: 20,
+        html2canvas: { scale: 0.5 }
+      });
     }
 
     document.getElementById('bimestre').addEventListener('change', e => {
