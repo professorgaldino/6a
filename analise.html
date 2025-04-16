@@ -4,67 +4,87 @@
   <meta charset="UTF-8">
   <title>Dashboard de Notas por Bimestre</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
       padding: 20px;
       background-color: #f9f9f9;
     }
+
     h1 {
       color: #333;
     }
-    select {
-      padding: 5px;
-      font-size: 16px;
-      margin-top: 10px;
+
+    h2 {
+      color: #007BFF;
     }
+
+    select, button {
+      padding: 8px;
+      font-size: 16px;
+      margin: 10px 10px 20px 0;
+    }
+
     #mensagem {
       margin-top: 20px;
       color: red;
       font-weight: bold;
     }
+
     #grafico-container {
-      max-width: 900px;
-      margin-top: 40px;
+      max-width: 1000px;
+      height: 500px;
       background-color: white;
       padding: 20px;
       border-radius: 10px;
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      margin-bottom: 40px;
     }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 30px;
-      background-color: white;
+
+    .table-section {
+      margin-bottom: 50px;
+    }
+
+    .tabela-wrapper {
+      max-width: 100%;
+      overflow-x: auto;
+      border: 1px solid #ccc;
       border-radius: 8px;
-      overflow: hidden;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     }
+
+    table {
+      width: max-content;
+      border-collapse: collapse;
+      margin-top: 10px;
+      background-color: white;
+      table-layout: auto;
+    }
+
     th, td {
       border: 1px solid #ccc;
-      padding: 12px 15px;
-      text-align: center;
-      font-size: 14px;
+      padding: 8px 12px;
+      text-align: left;
+      white-space: nowrap;
     }
+
     th {
-      background-color: #4CAF50;
+      background-color: #e8f1ff;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    #botao-pdf {
+      background-color: #007BFF;
       color: white;
-      font-weight: bold;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
     }
-    td {
-      background-color: #f9f9f9;
-    }
-    tr:nth-child(even) td {
-      background-color: #f1f1f1;
-    }
-    tr:hover td {
-      background-color: #f0f8ff;
-    }
-    h2 {
-      margin-top: 40px;
-    }
-    .table-container {
-      margin-top: 40px;
+
+    #botao-pdf:hover {
+      background-color: #0056b3;
     }
   </style>
 </head>
@@ -80,13 +100,15 @@
     <option value="4">4º Bimestre</option>
   </select>
 
+  <button id="botao-pdf" onclick="gerarPDF()">Gerar PDF</button>
+
   <p id="mensagem"></p>
 
   <div id="grafico-container">
-    <canvas id="graficoNotas"></canvas>
+    <canvas id="graficoNotas" style="width: 100%; height: 100%;"></canvas>
   </div>
 
-  <div id="tabela-container" class="table-container"></div>
+  <div id="tabela-container"></div>
 
   <script>
     const chartCanvas = document.getElementById('graficoNotas');
@@ -161,7 +183,7 @@
         }
 
         if (!encontrouNota) {
-          mensagem.textContent = 'Nenhuma nota lançada neste bimestre. As disciplinas aparecerão zeradas.';
+          mensagem.textContent = 'Nenhuma nota lançada neste bimestre.';
         } else {
           mensagem.textContent = '';
         }
@@ -191,7 +213,7 @@
             {
               label: 'Notas ≥ 5 (Satisfatórias)',
               data: boas,
-              backgroundColor: 'green'
+              backgroundColor: 'blue'
             },
             {
               label: 'Notas < 5 (Vermelhas)',
@@ -207,6 +229,7 @@
         },
         options: {
           responsive: true,
+          maintainAspectRatio: false,
           scales: {
             y: {
               beginAtZero: true,
@@ -238,57 +261,95 @@
     function gerarTabelas(notas, semNotas) {
       let html = '';
 
-      // Agrupar disciplinas com notas vermelhas por aluno
       const vermelhasPorAluno = {};
       notas.forEach(item => {
         if (!vermelhasPorAluno[item.aluno]) {
-          vermelhasPorAluno[item.aluno] = [];
+          vermelhasPorAluno[item.aluno] = {};
         }
-        vermelhasPorAluno[item.aluno].push(`${item.disciplina} (${item.nota})`);
+        vermelhasPorAluno[item.aluno][item.disciplina] = item.nota;
       });
 
-      // Tabela de notas vermelhas
-      if (notas.length === 0) {
-        html += '<p><em>Nenhum aluno com nota vermelha neste bimestre.</em></p>';
-      } else {
-        html += '<h2>Alunos com Notas Vermelhas</h2>';
-        html += '<table>';
-        html += '<tr><th>Aluno</th><th>Disciplinas com Nota < 5</th></tr>';
+      const disciplinas = [
+        'Arte', 'Ciências', 'Educação Financeira', 'Educação Física', 'Eletivas',
+        'Geografia', 'História', 'Língua Inglesa', 'Língua Portuguesa', 'Matemática',
+        'Orientação de Estudo – Língua Portuguesa', 'Orientação de Estudo – Matemática',
+        'Projeto de Vida', 'Redação e Leitura', 'Tecnologia e Inovação'
+      ];
 
-        for (const aluno in vermelhasPorAluno) {
-          const disciplinas = vermelhasPorAluno[aluno];
-          html += `<tr><td>${aluno}</td><td>${disciplinas.join(', ')}</td></tr>`;
-        }
+      html += '<div class="table-section">';
+      html += '<h2>Alunos com Notas Vermelhas</h2>';
+      html += '<div class="tabela-wrapper"><table>';
+      html += '<thead><tr><th>Aluno</th>';
+      disciplinas.forEach(d => html += `<th>${d}</th>`);
+      html += '</tr></thead><tbody>';
 
-        html += '</table>';
-      }
+      Object.keys(vermelhasPorAluno).forEach(aluno => {
+        html += `<tr><td>${aluno}</td>`;
+        disciplinas.forEach(d => {
+          html += `<td>${vermelhasPorAluno[aluno][d] || ''}</td>`;
+        });
+        html += '</tr>';
+      });
 
-      // Agrupar disciplinas sem nota por aluno
+      html += '</tbody></table></div></div>';
+
       const semNotaPorAluno = {};
       semNotas.forEach(item => {
         if (!semNotaPorAluno[item.aluno]) {
-          semNotaPorAluno[item.aluno] = [];
+          semNotaPorAluno[item.aluno] = {};
         }
-        semNotaPorAluno[item.aluno].push(item.disciplina);
+        semNotaPorAluno[item.aluno][item.disciplina] = true;
       });
 
-      // Tabela de alunos sem nota lançada
-      if (semNotas.length === 0) {
-        html += '<p><em>Todos os alunos têm notas lançadas.</em></p>';
-      } else {
-        html += '<h2>Alunos Sem Nota Lançada</h2>';
-        html += '<table>';
-        html += '<tr><th>Aluno</th><th>Disciplinas Sem Nota</th></tr>';
+      html += '<div class="table-section">';
+      html += '<h2>Alunos Sem Nota Lançada</h2>';
+      html += '<div class="tabela-wrapper"><table>';
+      html += '<thead><tr><th>Aluno</th>';
+      disciplinas.forEach(d => html += `<th>${d}</th>`);
+      html += '</tr></thead><tbody>';
 
-        for (const aluno in semNotaPorAluno) {
-          const disciplinas = semNotaPorAluno[aluno];
-          html += `<tr><td>${aluno}</td><td>${disciplinas.join(', ')}</td></tr>`;
-        }
+      Object.keys(semNotaPorAluno).forEach(aluno => {
+        html += `<tr><td>${aluno}</td>`;
+        disciplinas.forEach(d => {
+          html += `<td>${semNotaPorAluno[aluno][d] ? '—' : ''}</td>`;
+        });
+        html += '</tr>';
+      });
 
-        html += '</table>';
-      }
+      html += '</tbody></table></div></div>';
 
       tabelaContainer.innerHTML = html;
+    }
+
+    function gerarPDF() {
+      const { jsPDF } = window.jspdf;
+      const dataHora = new Date().toLocaleString('pt-BR').replace(/[/:]/g, "-");
+
+      const tabelas = tabelaContainer.querySelectorAll('.table-section');
+
+      tabelas.forEach((section) => {
+        const titulo = section.querySelector('h2').textContent;
+        const tabela = section.querySelector('table');
+
+        const doc = new jsPDF({
+          orientation: 'landscape',
+          unit: 'pt',
+          format: 'a4'
+        });
+
+        doc.setFontSize(12);
+        doc.text(`Relatório: ${titulo}`, 40, 30);
+        doc.text(`Gerado em: ${dataHora.replace(/-/g, "/")}`, 40, 50);
+
+        doc.html(tabela, {
+          callback: function (doc) {
+            doc.save(`${titulo.replace(/\s+/g, "_")}_${dataHora}.pdf`);
+          },
+          x: 40,
+          y: 70,
+          html2canvas: { scale: 0.8 }
+        });
+      });
     }
 
     document.getElementById('bimestre').addEventListener('change', e => {
