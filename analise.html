@@ -321,7 +321,10 @@
       carregarDados(e.target.value);
     });
 
-    gerarPdfBtn.addEventListener('click', gerarPDF);
+    gerarPdfBtn.addEventListener('click', async () => {
+      await gerarPDF();
+      alert('PDFs gerados com sucesso!');
+    });
 
     carregarDados(1);
   </script>
