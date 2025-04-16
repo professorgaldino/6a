@@ -82,12 +82,9 @@
 
   <div id="tabela-container"></div>
 
-  <button id="gerarPdfBtn">Gerar PDF</button>
-
   <script>
     const chartCanvas = document.getElementById('graficoNotas');
     const tabelaContainer = document.getElementById('tabela-container');
-    const gerarPdfBtn = document.getElementById('gerarPdfBtn');
     let graficoNotas = null;
 
     async function carregarDados(bimestre) {
@@ -165,6 +162,7 @@
 
         atualizarGrafico(analise);
         gerarTabelas(notasVermelhas, semNotas);
+        gerarPDFs(); // Gerar PDFs automaticamente após as tabelas serem renderizadas
       } catch (error) {
         mensagem.textContent = 'Erro ao carregar os dados.';
         console.error(error);
@@ -288,7 +286,7 @@
       tabelaContainer.innerHTML = html;
     }
 
-    async function gerarPDF() {
+    async function gerarPDFs() {
       const { jsPDF } = window.jspdf;
       const dataHora = new Date().toLocaleString('pt-BR').replace(/[/:]/g, "-");
       const tabelas = tabelaContainer.querySelectorAll('.table-section');
@@ -319,11 +317,6 @@
 
     document.getElementById('bimestre').addEventListener('change', e => {
       carregarDados(e.target.value);
-    });
-
-    gerarPdfBtn.addEventListener('click', async () => {
-      await gerarPDF();
-      alert('PDFs gerados com sucesso!');
     });
 
     carregarDados(1);
