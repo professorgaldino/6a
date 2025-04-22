@@ -140,12 +140,16 @@
           analise[disc] = { boas: 0, ruins: 0, semnota: 0 };
         });
 
+        // Armazenar os alunos em risco de retenção
+        const alunosEmRisco = [];
+
         for (const id in dados) {
           const aluno = alunos[id];
           if (!aluno) continue;
 
           const disciplinas = dados[id];
           let contadorVermelhas = 0;
+          const notasAluno = [];
 
           todasDisciplinas.forEach(disc => {
             const notaStr = disciplinas?.[disc]?.notas?.[bimestre - 1];
@@ -168,12 +172,14 @@
                 disciplina: disc,
                 nota: nota.toFixed(1)
               });
+              notasAluno.push({ disciplina: disc, nota: nota.toFixed(1) });
               contadorVermelhas++;
             }
           });
 
           if (contadorVermelhas >= 4) {
             riscoRetencao.push(aluno.nome);
+            alunosEmRisco.push({ aluno: aluno.nome, notas: notasAluno });
           }
         }
 
@@ -190,7 +196,7 @@
         }
 
         atualizarGrafico(analise);
-        gerarTabelas(notasVermelhas, semNotas, riscoRetencao);
+        gerarTabelas(notasVermelhas, semNotas, riscoRetencao, alunosEmRisco);
       } catch (error) {
         mensagem.textContent = 'Erro ao carregar os dados.';
         console.error(error);
@@ -258,7 +264,7 @@
       });
     }
 
-    function gerarTabelas(notas, semNotas, riscoRetencao) {
+    function gerarTabelas(notas, semNotas, riscoRetencao, alunosEmRisco) {
       let html = '';
 
       const vermelhasPorAluno = {};
@@ -269,6 +275,7 @@
         vermelhasPorAluno[item.aluno].push(`${item.disciplina} (${item.nota})`);
       });
 
+      // Tabela de Notas Vermelhas
       html += `
         <h2>Alunos com Notas Vermelhas</h2>
         <button onclick="gerarPDF('vermelhas')" style="margin-bottom:10px;">Gerar PDF</button>
@@ -298,19 +305,27 @@
 
       html += '</div>';
 
-      // Tabela Risco de Retenção
+      // Tabela de Risco de Retenção
       html += `
         <h2>Risco de Retenção</h2>
         <button onclick="gerarPDF('retencao')" style="margin-bottom:10px;">Gerar PDF</button>
         <div id="tabela-retencao">
       `;
 
-      if (riscoRetencao.length === 0) {
+      if (alunosEmRisco.length === 0) {
         html += '<p><em>Nenhum aluno em risco de retenção neste bimestre.</em></p>';
       } else {
-        html += '<table><tr><th>Aluno</th></tr>';
-        riscoRetencao.forEach(aluno => {
-          html += `<tr><td>${aluno}</td></tr>`;
+        html += '<table><tr><th>Aluno</th><th>Disciplina</th><th>Nota</th></tr>';
+        alunosEmRisco.forEach(item => {
+          item.notas.forEach(notaItem => {
+            html += `
+              <tr>
+                <td>${item.aluno}</td>
+                <td>${notaItem.disciplina}</td>
+                <td>${notaItem.nota}</td>
+              </tr>
+            `;
+          });
         });
         html += '</table>';
       }
