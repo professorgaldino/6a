@@ -133,6 +133,7 @@
         const notasVermelhas = [];
         const semNotas = [];
         const riscoRetencao = [];
+        const alunosSemNotas = [];
         let encontrouNota = false;
 
         for (const id in dados) {
@@ -160,6 +161,9 @@
             if (notaStr === '-' || notaStr === undefined || isNaN(nota)) {
               analise[disc].semnota++;
               semNotas.push({ aluno: aluno.nome, disciplina: disc });
+              if (!notaStr) {
+                alunosSemNotas.push({ aluno: aluno.nome, disciplina: disc });
+              }
               return;
             }
 
@@ -196,7 +200,7 @@
         }
 
         atualizarGrafico(analise);
-        gerarTabelas(notasVermelhas, semNotas, riscoRetencao);
+        gerarTabelas(notasVermelhas, semNotas, riscoRetencao, alunosSemNotas);
       } catch (error) {
         mensagem.textContent = 'Erro ao carregar os dados.';
         console.error(error);
@@ -264,7 +268,7 @@
       });
     }
 
-    function gerarTabelas(notas, semNotas, riscoRetencao) {
+    function gerarTabelas(notas, semNotas, riscoRetencao, alunosSemNotas) {
       let html = '';
 
       const vermelhasPorAluno = {};
@@ -318,6 +322,20 @@
         html += '</table>';
       }
 
+      // Tabela: Alunos sem Notas Lançadas
+      if (alunosSemNotas.length === 0) {
+        html += '<p><em>Todos os alunos possuem notas lançadas neste bimestre.</em></p>';
+      } else {
+        html += '<h2>Alunos sem Notas Lançadas</h2>';
+        html += '<button class="btn-pdf" onclick="gerarPDF(\'tabelaSemNotas\')">Gerar PDF</button>';
+
+        html += '<table id="tabelaSemNotas"><tr><th>Aluno</th><th>Disciplina</th></tr>';
+        alunosSemNotas.forEach(item => {
+          html += `<tr><td>${item.aluno}</td><td>${item.disciplina}</td></tr>`;
+        });
+        html += '</table>';
+      }
+
       tabelaContainer.innerHTML = html;
     }
 
@@ -326,7 +344,7 @@
 
       // Usando html2pdf.js para gerar o PDF diretamente
       const opt = {
-        margin:       1,
+        margin:       2,  // Maior margem entre as páginas
         filename:     `${tabelaId}.pdf`,
         html2canvas:  { scale: 2 },
         jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' } // A4 horizontal
