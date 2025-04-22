@@ -252,6 +252,8 @@
         vermelhasPorAluno[item.aluno].push(`${item.disciplina} (${item.nota})`);
       });
 
+      const riscoRetencao = {};
+
       if (notas.length === 0) {
         html += '<p><em>Nenhum aluno com nota vermelha neste bimestre.</em></p>';
       } else {
@@ -277,11 +279,40 @@
             html += `<td>${disciplinas[i] || ''}</td>`;
           }
           html += '</tr>';
+
+          if (destaque) {
+            riscoRetencao[aluno] = disciplinas;
+          }
         }
 
         html += '</table>';
       }
 
+      // TABELA DE RISCO DE RETENÇÃO
+      const riscoAlunos = Object.keys(riscoRetencao);
+      if (riscoAlunos.length > 0) {
+        html += '<h2 style="color: darkred;">Risco de Retenção</h2>';
+        const maxColunas = Math.max(...Object.values(riscoRetencao).map(arr => arr.length));
+
+        html += '<table><tr><th>Aluno</th>';
+        for (let i = 1; i <= maxColunas; i++) {
+          html += `<th>Nota ${i}</th>`;
+        }
+        html += '</tr>';
+
+        for (const aluno of riscoAlunos) {
+          const disciplinas = riscoRetencao[aluno];
+          html += `<tr style="background-color: yellow;"><td style="color: red; font-weight: bold;">${aluno}</td>`;
+          for (let i = 0; i < maxColunas; i++) {
+            html += `<td>${disciplinas[i] || ''}</td>`;
+          }
+          html += '</tr>';
+        }
+
+        html += '</table>';
+      }
+
+      // TABELA DE ALUNOS SEM NOTA
       const semNotaPorAluno = {};
       semNotas.forEach(item => {
         if (!semNotaPorAluno[item.aluno]) {
