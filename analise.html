@@ -165,7 +165,7 @@
           if (notasVermelhasPorAluno >= 4) {
             riscoRetencao.push({
               aluno: aluno.nome,
-              notasVermelhas: notasVermelhasPorAluno
+              disciplinas: notasVermelhas.filter(item => item.aluno === aluno.nome)
             });
           }
         }
@@ -327,15 +327,27 @@
         html += '</table>';
       }
 
-      // Risco de Retenção
+      // Risco de Retenção com Disciplinas
       if (riscoRetencao.length === 0) {
         html += '<p><em>Nenhum aluno com risco de retenção neste bimestre.</em></p>';
       } else {
         html += '<h2>Risco de Retenção</h2>';
-        html += '<table><tr><th>Aluno</th><th>Quantidade de Notas Vermelhas</th></tr>';
-        
+        html += '<table><tr><th>Aluno</th>';
+
+        // Gerando colunas para as disciplinas
+        const disciplinasUnicas = [...new Set(riscoRetencao.flatMap(item => item.disciplinas.map(d => d.disciplina)))];
+        disciplinasUnicas.forEach((disc, index) => {
+          html += `<th>Nota ${index + 1} - ${disc}</th>`;
+        });
+        html += '</tr>';
+
         riscoRetencao.forEach(item => {
-          html += `<tr><td>${item.aluno}</td><td>${item.notasVermelhas}</td></tr>`;
+          html += `<tr><td>${item.aluno}</td>`;
+          disciplinasUnicas.forEach(disc => {
+            const disciplina = item.disciplinas.find(d => d.disciplina === disc);
+            html += `<td>${disciplina ? disciplina.nota : ''}</td>`;
+          });
+          html += '</tr>';
         });
 
         html += '</table>';
