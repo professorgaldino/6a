@@ -4,8 +4,6 @@
   <meta charset="UTF-8">
   <title>Dashboard de Notas por Bimestre</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.2/html2pdf.bundle.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -50,19 +48,6 @@
     }
     h2 {
       margin-top: 40px;
-      display: inline-block;
-    }
-    .btn-pdf {
-      background-color: #00796b;
-      color: white;
-      padding: 5px 15px;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      margin-left: 10px;
-    }
-    .btn-pdf:hover {
-      background-color: #004d40;
     }
     #logo {
       position: absolute;
@@ -120,8 +105,8 @@
       tabelaContainer.innerHTML = '';
 
       try {
-        const [dadosRes, alunosRes] = await Promise.all([ 
-          fetch(`dados${bimestre}.json`), 
+        const [dadosRes, alunosRes] = await Promise.all([
+          fetch(`dados${bimestre}.json`),
           fetch(`alunos.json`)
         ]);
 
@@ -132,11 +117,8 @@
         const todasDisciplinas = new Set();
         const notasVermelhas = [];
         const semNotas = [];
-        const riscoRetencao = [];
-        const alunosSemNotas = [];
         let encontrouNota = false;
 
-        // Coleta as disciplinas
         for (const id in dados) {
           const disciplinas = dados[id];
           for (const disc in disciplinas) {
@@ -144,36 +126,27 @@
           }
         }
 
-        // Inicializa o analise para cada disciplina
         todasDisciplinas.forEach(disc => {
           analise[disc] = { boas: 0, ruins: 0, semnota: 0 };
         });
 
-        // Verificação de notas e construção das listas
         for (const id in dados) {
           const aluno = alunos[id];
           if (!aluno) continue;
 
           const disciplinas = dados[id];
-          let notasRuins = 0;
-
           todasDisciplinas.forEach(disc => {
             const notaStr = disciplinas?.[disc]?.notas?.[bimestre - 1];
             const nota = parseFloat(notaStr);
 
-            // Verifica se a nota não foi lançada
             if (notaStr === '-' || notaStr === undefined || isNaN(nota)) {
               analise[disc].semnota++;
               semNotas.push({ aluno: aluno.nome, disciplina: disc });
-              if (!notaStr) {
-                alunosSemNotas.push({ aluno: aluno.nome, disciplina: disc });
-              }
               return;
             }
 
             encontrouNota = true;
 
-            // Conta as boas e ruins
             if (nota >= 5) {
               analise[disc].boas++;
             } else {
@@ -183,13 +156,8 @@
                 disciplina: disc,
                 nota: nota.toFixed(1)
               });
-              notasRuins++;
             }
           });
-
-          if (notasRuins >= 4) {
-            riscoRetencao.push({ aluno: aluno.nome, notas: notasRuins });
-          }
         }
 
         if (todasDisciplinas.size === 0) {
@@ -205,7 +173,7 @@
         }
 
         atualizarGrafico(analise);
-        gerarTabelas(notasVermelhas, semNotas, riscoRetencao, alunosSemNotas);
+        gerarTabelas(notasVermelhas, semNotas);
       } catch (error) {
         mensagem.textContent = 'Erro ao carregar os dados.';
         console.error(error);
@@ -273,7 +241,7 @@
       });
     }
 
-    function gerarTabelas(notas, semNotas, riscoRetencao, alunosSemNotas) {
+    function gerarTabelas(notas, semNotas) {
       let html = '';
 
       const vermelhasPorAluno = {};
@@ -284,15 +252,14 @@
         vermelhasPorAluno[item.aluno].push(`${item.disciplina} (${item.nota})`);
       });
 
-      // Tabela: Alunos com Notas Vermelhas
       if (notas.length === 0) {
         html += '<p><em>Nenhum aluno com nota vermelha neste bimestre.</em></p>';
       } else {
         html += '<h2>Alunos com Notas Vermelhas</h2>';
-        html += '<button class="btn-pdf" onclick="gerarPDF(\'tabelaVermelhas\')">Gerar PDF</button>';
-        
+
         const maxVermelhas = Math.max(...Object.values(vermelhasPorAluno).map(arr => arr.length));
-        html += '<table id="tabelaVermelhas"><tr><th>Aluno</th>';
+
+        html += '<table><tr><th>Aluno</th>';
         for (let i = 1; i <= maxVermelhas; i++) {
           html += `<th>Nota ${i}</th>`;
         }
@@ -301,6 +268,7 @@
         for (const aluno in vermelhasPorAluno) {
           const disciplinas = vermelhasPorAluno[aluno];
           const destaque = disciplinas.length >= 4;
+
           const linhaStyle = destaque ? ' style="background-color: yellow;"' : '';
           const nomeStyle = destaque ? ' style="color:red; font-weight:bold;"' : '';
 
@@ -310,59 +278,51 @@
           }
           html += '</tr>';
         }
+
         html += '</table>';
       }
 
-      // Tabela: Risco de Retenção
-      if (riscoRetencao.length === 0) {
-        html += '<p><em>Nenhum aluno em risco de retenção neste bimestre.</em></p>';
+      const semNotaPorAluno = {};
+      semNotas.forEach(item => {
+        if (!semNotaPorAluno[item.aluno]) {
+          semNotaPorAluno[item.aluno] = [];
+        }
+        semNotaPorAluno[item.aluno].push(item.disciplina);
+      });
+
+      if (semNotas.length === 0) {
+        html += '<p><em>Todos os alunos têm notas lançadas.</em></p>';
       } else {
-        html += '<h2>Risco de Retenção</h2>';
-        html += '<button class="btn-pdf" onclick="gerarPDF(\'tabelaRisco\')">Gerar PDF</button>';
+        html += '<h2>Alunos Sem Nota Lançada</h2>';
 
-        html += '<table id="tabelaRisco"><tr><th>Aluno</th><th>Disciplinas com Notas Vermelhas</th></tr>';
-        riscoRetencao.forEach(item => {
-          html += `<tr style="background-color: yellow;"><td style="color:red; font-weight:bold;">${item.aluno}</td><td>${item.notas}</td></tr>`;
-        });
-        html += '</table>';
-      }
+        const maxSemNotas = Math.max(...Object.values(semNotaPorAluno).map(arr => arr.length));
 
-      // Tabela: Alunos sem Notas Lançadas
-      if (alunosSemNotas.length === 0) {
-        html += '<p><em>Todos os alunos possuem notas lançadas neste bimestre.</em></p>';
-      } else {
-        html += '<h2>Alunos sem Notas Lançadas</h2>';
-        html += '<button class="btn-pdf" onclick="gerarPDF(\'tabelaSemNotas\')">Gerar PDF</button>';
+        html += '<table><tr><th>Aluno</th>';
+        for (let i = 1; i <= maxSemNotas; i++) {
+          html += `<th>Disciplina ${i}</th>`;
+        }
+        html += '</tr>';
 
-        html += '<table id="tabelaSemNotas"><tr><th>Aluno</th><th>Disciplina</th></tr>';
-        alunosSemNotas.forEach(item => {
-          html += `<tr><td>${item.aluno}</td><td>${item.disciplina}</td></tr>`;
-        });
+        for (const aluno in semNotaPorAluno) {
+          const disciplinas = semNotaPorAluno[aluno];
+          html += `<tr><td>${aluno}</td>`;
+          for (let i = 0; i < maxSemNotas; i++) {
+            html += `<td>${disciplinas[i] || ''}</td>`;
+          }
+          html += '</tr>';
+        }
+
         html += '</table>';
       }
 
       tabelaContainer.innerHTML = html;
     }
 
-    function gerarPDF(tabelaId) {
-      const tabela = document.getElementById(tabelaId);
-
-      // Usando html2pdf.js para gerar o PDF diretamente
-      const opt = {
-        margin:       2,  // Maior margem entre as páginas
-        filename:     `${tabelaId}.pdf`,
-        html2canvas:  { scale: 2 },
-        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' } // A4 horizontal
-      };
-
-      html2pdf().from(tabela).set(opt).save();
-    }
-
-    document.getElementById('bimestre').addEventListener('change', (event) => {
-      carregarDados(event.target.value);
+    document.getElementById('bimestre').addEventListener('change', e => {
+      carregarDados(e.target.value);
     });
 
-    carregarDados(1);  // Carregar dados do 1º Bimestre por padrão
+    carregarDados(1);
   </script>
 
 </body>
