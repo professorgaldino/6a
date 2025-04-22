@@ -70,6 +70,13 @@
     #voltarBtn:hover {
       background-color: #004d40;
     }
+    .nome-vermelho {
+      color: red;
+      font-weight: bold;
+    }
+    .fundo-amarelo {
+      background-color: yellow;
+    }
   </style>
 </head>
 <body>
@@ -279,7 +286,7 @@
 
         for (const aluno in vermelhasPorAluno) {
           const disciplinas = vermelhasPorAluno[aluno];
-          html += `<tr><td>${aluno}</td>`;
+          html += `<tr class="fundo-amarelo"><td class="nome-vermelho">${aluno}</td>`;
           for (let i = 0; i < disciplinas.length; i++) {
             html += `<td>${disciplinas[i]}</td>`;
           }
