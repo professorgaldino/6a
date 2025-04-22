@@ -49,6 +49,19 @@
     }
     h2 {
       margin-top: 40px;
+      display: inline-block;
+    }
+    .btn-pdf {
+      background-color: #00796b;
+      color: white;
+      padding: 5px 15px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-left: 10px;
+    }
+    .btn-pdf:hover {
+      background-color: #004d40;
     }
     #logo {
       position: absolute;
@@ -67,18 +80,6 @@
       cursor: pointer;
     }
     #voltarBtn:hover {
-      background-color: #004d40;
-    }
-    .pdf-btn {
-      margin-top: 20px;
-      padding: 10px 20px;
-      background-color: #00796b;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-    .pdf-btn:hover {
       background-color: #004d40;
     }
   </style>
@@ -107,10 +108,6 @@
 
   <button id="voltarBtn" onclick="window.location.href='index.html';">Voltar à Sala</button>
 
-  <button class="pdf-btn" id="gerarPdfBtn">Gerar PDF para Notas Vermelhas</button>
-  <button class="pdf-btn" id="gerarPdfRisco">Gerar PDF para Risco de Retenção</button>
-  <button class="pdf-btn" id="gerarPdfSemNotas">Gerar PDF para Alunos Sem Nota</button>
-
   <script>
     const chartCanvas = document.getElementById('graficoNotas');
     const tabelaContainer = document.getElementById('tabela-container');
@@ -134,6 +131,7 @@
         const todasDisciplinas = new Set();
         const notasVermelhas = [];
         const semNotas = [];
+        const riscoRetencao = [];
         let encontrouNota = false;
 
         for (const id in dados) {
@@ -152,6 +150,8 @@
           if (!aluno) continue;
 
           const disciplinas = dados[id];
+          let notasRuins = 0;
+
           todasDisciplinas.forEach(disc => {
             const notaStr = disciplinas?.[disc]?.notas?.[bimestre - 1];
             const nota = parseFloat(notaStr);
@@ -173,8 +173,13 @@
                 disciplina: disc,
                 nota: nota.toFixed(1)
               });
+              notasRuins++;
             }
           });
+
+          if (notasRuins >= 4) {
+            riscoRetencao.push({ aluno: aluno.nome, notas: notasRuins });
+          }
         }
 
         if (todasDisciplinas.size === 0) {
@@ -190,7 +195,7 @@
         }
 
         atualizarGrafico(analise);
-        gerarTabelas(notasVermelhas, semNotas);
+        gerarTabelas(notasVermelhas, semNotas, riscoRetencao);
       } catch (error) {
         mensagem.textContent = 'Erro ao carregar os dados.';
         console.error(error);
@@ -258,7 +263,7 @@
       });
     }
 
-    function gerarTabelas(notas, semNotas) {
+    function gerarTabelas(notas, semNotas, riscoRetencao) {
       let html = '';
 
       const vermelhasPorAluno = {};
@@ -269,14 +274,15 @@
         vermelhasPorAluno[item.aluno].push(`${item.disciplina} (${item.nota})`);
       });
 
+      // Tabela: Alunos com Notas Vermelhas
       if (notas.length === 0) {
         html += '<p><em>Nenhum aluno com nota vermelha neste bimestre.</em></p>';
       } else {
         html += '<h2>Alunos com Notas Vermelhas</h2>';
-
+        html += '<button class="btn-pdf" onclick="gerarPDF(\'tabelaVermelhas\')">Gerar PDF</button>';
+        
         const maxVermelhas = Math.max(...Object.values(vermelhasPorAluno).map(arr => arr.length));
-
-        html += '<table><tr><th>Aluno</th>';
+        html += '<table id="tabelaVermelhas"><tr><th>Aluno</th>';
         for (let i = 1; i <= maxVermelhas; i++) {
           html += `<th>Nota ${i}</th>`;
         }
@@ -285,7 +291,6 @@
         for (const aluno in vermelhasPorAluno) {
           const disciplinas = vermelhasPorAluno[aluno];
           const destaque = disciplinas.length >= 4;
-
           const linhaStyle = destaque ? ' style="background-color: yellow;"' : '';
           const nomeStyle = destaque ? ' style="color:red; font-weight:bold;"' : '';
 
@@ -295,10 +300,10 @@
           }
           html += '</tr>';
         }
-
         html += '</table>';
       }
 
+      // Tabela: Alunos Sem Nota Lançada
       const semNotaPorAluno = {};
       semNotas.forEach(item => {
         if (!semNotaPorAluno[item.aluno]) {
@@ -311,10 +316,10 @@
         html += '<p><em>Todos os alunos têm notas lançadas.</em></p>';
       } else {
         html += '<h2>Alunos Sem Nota Lançada</h2>';
-
+        html += '<button class="btn-pdf" onclick="gerarPDF(\'tabelaSemNota\')">Gerar PDF</button>';
+        
         const maxSemNotas = Math.max(...Object.values(semNotaPorAluno).map(arr => arr.length));
-
-        html += '<table><tr><th>Aluno</th>';
+        html += '<table id="tabelaSemNota"><tr><th>Aluno</th>';
         for (let i = 1; i <= maxSemNotas; i++) {
           html += `<th>Disciplina ${i}</th>`;
         }
@@ -328,54 +333,44 @@
           }
           html += '</tr>';
         }
-
         html += '</table>';
       }
 
-      // Nova tabela para "Risco de Retenção"
-      const riscoRetencao = Object.entries(vermelhasPorAluno).filter(([aluno, notas]) => notas.length >= 4);
-      if (riscoRetencao.length > 0) {
+      // Tabela: Risco de Retenção
+      if (riscoRetencao.length === 0) {
+        html += '<p><em>Nenhum aluno em risco de retenção neste bimestre.</em></p>';
+      } else {
         html += '<h2>Risco de Retenção</h2>';
-        html += '<table><tr><th>Aluno</th><th>Notas Vermelhas</th></tr>';
-        riscoRetencao.forEach(([aluno, notas]) => {
-          html += `<tr><td>${aluno}</td><td>${notas.join(', ')}</td></tr>`;
-        });
+        html += '<button class="btn-pdf" onclick="gerarPDF(\'tabelaRisco\')">Gerar PDF</button>';
+        
+        html += '<table id="tabelaRisco"><tr><th>Aluno</th><th>Notas Vermelhas</th></tr>';
+        for (const aluno of riscoRetencao) {
+          html += `<tr><td>${aluno.aluno}</td><td>${aluno.notas}</td></tr>`;
+        }
         html += '</table>';
       }
 
       tabelaContainer.innerHTML = html;
     }
 
-    function gerarPdf(tabelaId) {
+    function gerarPDF(tabelaId) {
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF();
-      const tabelaHTML = document.getElementById(tabelaId).outerHTML;
-      doc.html(tabelaHTML, {
+      const tabela = document.getElementById(tabelaId);
+      const rows = tabela.innerHTML;
+
+      doc.html(tabela, {
         callback: function (doc) {
-          const data = new Date();
-          const dataHora = `${data.getDate()}/${data.getMonth() + 1}/${data.getFullYear()} ${data.getHours()}:${data.getMinutes()}`;
-          doc.text(`Data e Hora de Impressão: ${dataHora}`, 10, doc.internal.pageSize.height - 10);
-          doc.save(`relatorio_${tabelaId}.pdf`);
-        },
-        x: 10,
-        y: 10
+          const dataHora = new Date();
+          const dataFormatada = `${dataHora.getDate().toString().padStart(2, '0')}/${(dataHora.getMonth() + 1).toString().padStart(2, '0')}/${dataHora.getFullYear()}`;
+          doc.text(`Data e Hora de Impressão: ${dataFormatada}`, 10, doc.internal.pageSize.height - 10);
+          doc.save(`tabela_${tabelaId}.pdf`);
+        }
       });
     }
 
     document.getElementById('bimestre').addEventListener('change', e => {
       carregarDados(e.target.value);
-    });
-
-    document.getElementById('gerarPdfBtn').addEventListener('click', () => {
-      gerarPdf('tabelaNotasVermelhas');
-    });
-
-    document.getElementById('gerarPdfRisco').addEventListener('click', () => {
-      gerarPdf('tabelaRiscoRetencao');
-    });
-
-    document.getElementById('gerarPdfSemNotas').addEventListener('click', () => {
-      gerarPdf('tabelaAlunosSemNotas');
     });
 
     carregarDados(1);
