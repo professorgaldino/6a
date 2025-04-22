@@ -5,6 +5,7 @@
   <title>Dashboard de Notas por Bimestre</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.2/html2pdf.bundle.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -321,20 +322,17 @@
     }
 
     function gerarPDF(tabelaId) {
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF();
       const tabela = document.getElementById(tabelaId);
+      
+      // Usando html2pdf.js para gerar o PDF diretamente
+      const opt = {
+        margin:       1,
+        filename:     `${tabelaId}.pdf`,
+        html2canvas:  { scale: 2 },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
 
-      doc.html(tabela, {
-        callback: function (doc) {
-          const dataHora = new Date();
-          const dataFormatada = `${dataHora.getDate().toString().padStart(2, '0')}/${(dataHora.getMonth() + 1).toString().padStart(2, '0')}/${dataHora.getFullYear()}`;
-          doc.text(`Data e Hora de Impressão: ${dataFormatada}`, 10, doc.internal.pageSize.height - 10);
-          doc.save(`${tabelaId}.pdf`); // Gera o PDF e o faz ser baixado automaticamente
-        },
-        x: 10,
-        y: 10
-      });
+      html2pdf().from(tabela).set(opt).save();
     }
 
     document.getElementById('bimestre').addEventListener('change', e => {
