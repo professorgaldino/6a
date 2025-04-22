@@ -93,7 +93,7 @@
   <label for="bimestre">Selecione o bimestre:</label>
   <select id="bimestre">
     <option value="1">1º Bimestre</option>
-    <option value="2">2º Bimestre</option>
+    <option value="2">2º Bestre</option>
     <option value="3">3º Bimestre</option>
     <option value="4">4º Bimestre</option>
   </select>
@@ -337,16 +337,34 @@
       }
 
       // Tabela: Risco de Retenção
-      if (riscoRetencao.length === 0) {
+      const riscoDeRetencaoPorAluno = {};
+      notas.forEach(item => {
+        if (!riscoDeRetencaoPorAluno[item.aluno]) {
+          riscoDeRetencaoPorAluno[item.aluno] = [];
+        }
+        if (item.nota < 5) riscoDeRetencaoPorAluno[item.aluno].push(item.disciplina);
+      });
+
+      const alunosEmRisco = [];
+      for (const aluno in riscoDeRetencaoPorAluno) {
+        if (riscoDeRetencaoPorAluno[aluno].length >= 4) {
+          alunosEmRisco.push({
+            aluno,
+            disciplinas: riscoDeRetencaoPorAluno[aluno].join(', ')
+          });
+        }
+      }
+
+      if (alunosEmRisco.length === 0) {
         html += '<p><em>Nenhum aluno em risco de retenção neste bimestre.</em></p>';
       } else {
         html += '<h2>Risco de Retenção</h2>';
         html += '<button class="btn-pdf" onclick="gerarPDF(\'tabelaRisco\')">Gerar PDF</button>';
         
-        html += '<table id="tabelaRisco"><tr><th>Aluno</th><th>Notas Vermelhas</th></tr>';
-        for (const aluno of riscoRetencao) {
-          html += `<tr><td>${aluno.aluno}</td><td>${aluno.notas}</td></tr>`;
-        }
+        html += '<table id="tabelaRisco"><tr><th>Aluno</th><th>Disciplinas com Notas Vermelhas</th></tr>';
+        alunosEmRisco.forEach(item => {
+          html += `<tr><td>${item.aluno}</td><td>${item.disciplinas}</td></tr>`;
+        });
         html += '</table>';
       }
 
@@ -364,7 +382,7 @@
           const dataHora = new Date();
           const dataFormatada = `${dataHora.getDate().toString().padStart(2, '0')}/${(dataHora.getMonth() + 1).toString().padStart(2, '0')}/${dataHora.getFullYear()}`;
           doc.text(`Data e Hora de Impressão: ${dataFormatada}`, 10, doc.internal.pageSize.height - 10);
-          doc.save(`tabela_${tabelaId}.pdf`);
+          doc.save(`${tabelaId}.pdf`); // Gera o PDF e o faz ser baixado automaticamente
         }
       });
     }
