@@ -93,7 +93,7 @@
   <label for="bimestre">Selecione o bimestre:</label>
   <select id="bimestre">
     <option value="1">1º Bimestre</option>
-    <option value="2">2º Bestre</option>
+    <option value="2">2º Bimestre</option>
     <option value="3">3º Bimestre</option>
     <option value="4">4º Bimestre</option>
   </select>
@@ -119,8 +119,8 @@
       tabelaContainer.innerHTML = '';
 
       try {
-        const [dadosRes, alunosRes] = await Promise.all([
-          fetch(`dados${bimestre}.json`),
+        const [dadosRes, alunosRes] = await Promise.all([ 
+          fetch(`dados${bimestre}.json`), 
           fetch(`alunos.json`)
         ]);
 
@@ -303,67 +303,16 @@
         html += '</table>';
       }
 
-      // Tabela: Alunos Sem Nota Lançada
-      const semNotaPorAluno = {};
-      semNotas.forEach(item => {
-        if (!semNotaPorAluno[item.aluno]) {
-          semNotaPorAluno[item.aluno] = [];
-        }
-        semNotaPorAluno[item.aluno].push(item.disciplina);
-      });
-
-      if (semNotas.length === 0) {
-        html += '<p><em>Todos os alunos têm notas lançadas.</em></p>';
-      } else {
-        html += '<h2>Alunos Sem Nota Lançada</h2>';
-        html += '<button class="btn-pdf" onclick="gerarPDF(\'tabelaSemNota\')">Gerar PDF</button>';
-        
-        const maxSemNotas = Math.max(...Object.values(semNotaPorAluno).map(arr => arr.length));
-        html += '<table id="tabelaSemNota"><tr><th>Aluno</th>';
-        for (let i = 1; i <= maxSemNotas; i++) {
-          html += `<th>Disciplina ${i}</th>`;
-        }
-        html += '</tr>';
-
-        for (const aluno in semNotaPorAluno) {
-          const disciplinas = semNotaPorAluno[aluno];
-          html += `<tr><td>${aluno}</td>`;
-          for (let i = 0; i < maxSemNotas; i++) {
-            html += `<td>${disciplinas[i] || ''}</td>`;
-          }
-          html += '</tr>';
-        }
-        html += '</table>';
-      }
-
       // Tabela: Risco de Retenção
-      const riscoDeRetencaoPorAluno = {};
-      notas.forEach(item => {
-        if (!riscoDeRetencaoPorAluno[item.aluno]) {
-          riscoDeRetencaoPorAluno[item.aluno] = [];
-        }
-        if (item.nota < 5) riscoDeRetencaoPorAluno[item.aluno].push(item.disciplina);
-      });
-
-      const alunosEmRisco = [];
-      for (const aluno in riscoDeRetencaoPorAluno) {
-        if (riscoDeRetencaoPorAluno[aluno].length >= 4) {
-          alunosEmRisco.push({
-            aluno,
-            disciplinas: riscoDeRetencaoPorAluno[aluno].join(', ')
-          });
-        }
-      }
-
-      if (alunosEmRisco.length === 0) {
+      if (riscoRetencao.length === 0) {
         html += '<p><em>Nenhum aluno em risco de retenção neste bimestre.</em></p>';
       } else {
         html += '<h2>Risco de Retenção</h2>';
         html += '<button class="btn-pdf" onclick="gerarPDF(\'tabelaRisco\')">Gerar PDF</button>';
-        
+
         html += '<table id="tabelaRisco"><tr><th>Aluno</th><th>Disciplinas com Notas Vermelhas</th></tr>';
-        alunosEmRisco.forEach(item => {
-          html += `<tr><td>${item.aluno}</td><td>${item.disciplinas}</td></tr>`;
+        riscoRetencao.forEach(item => {
+          html += `<tr style="background-color: yellow;"><td style="color:red; font-weight:bold;">${item.aluno}</td><td>${item.notas}</td></tr>`;
         });
         html += '</table>';
       }
@@ -375,7 +324,6 @@
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF();
       const tabela = document.getElementById(tabelaId);
-      const rows = tabela.innerHTML;
 
       doc.html(tabela, {
         callback: function (doc) {
@@ -383,7 +331,9 @@
           const dataFormatada = `${dataHora.getDate().toString().padStart(2, '0')}/${(dataHora.getMonth() + 1).toString().padStart(2, '0')}/${dataHora.getFullYear()}`;
           doc.text(`Data e Hora de Impressão: ${dataFormatada}`, 10, doc.internal.pageSize.height - 10);
           doc.save(`${tabelaId}.pdf`); // Gera o PDF e o faz ser baixado automaticamente
-        }
+        },
+        x: 10,
+        y: 10
       });
     }
 
