@@ -327,7 +327,7 @@
         html += '</table>';
       }
 
-      // Risco de Retenção
+      // Risco de Retenção - Formato igual à tabela de Notas Vermelhas
       if (riscoRetencao.length === 0) {
         html += '<p><em>Nenhum aluno com risco de retenção neste bimestre.</em></p>';
       } else {
@@ -335,10 +335,10 @@
         html += '<table><tr><th>Aluno</th>';
 
         // Gerando colunas para as notas
-        let notaIndex = 1;
         riscoRetencao.forEach(item => {
+          let notaIndex = 1;
           item.disciplinas.forEach(disciplina => {
-            html += `<th>Nota ${notaIndex++} - ${disciplina.disciplina}</th>`;
+            html += `<th>Nota ${notaIndex++}</th>`;
           });
         });
 
@@ -347,7 +347,7 @@
         riscoRetencao.forEach(item => {
           html += `<tr><td>${item.aluno}</td>`;
           item.disciplinas.forEach(disciplina => {
-            html += `<td>${disciplina.nota}</td>`;
+            html += `<td>${disciplina.disciplina} (${disciplina.nota})</td>`;
           });
           html += '</tr>';
         });
