@@ -136,6 +136,7 @@
         const alunosSemNotas = [];
         let encontrouNota = false;
 
+        // Coleta as disciplinas
         for (const id in dados) {
           const disciplinas = dados[id];
           for (const disc in disciplinas) {
@@ -143,10 +144,12 @@
           }
         }
 
+        // Inicializa o analise para cada disciplina
         todasDisciplinas.forEach(disc => {
           analise[disc] = { boas: 0, ruins: 0, semnota: 0 };
         });
 
+        // Verificação de notas e construção das listas
         for (const id in dados) {
           const aluno = alunos[id];
           if (!aluno) continue;
@@ -158,6 +161,7 @@
             const notaStr = disciplinas?.[disc]?.notas?.[bimestre - 1];
             const nota = parseFloat(notaStr);
 
+            // Verifica se a nota não foi lançada
             if (notaStr === '-' || notaStr === undefined || isNaN(nota)) {
               analise[disc].semnota++;
               semNotas.push({ aluno: aluno.nome, disciplina: disc });
@@ -169,6 +173,7 @@
 
             encontrouNota = true;
 
+            // Conta as boas e ruins
             if (nota >= 5) {
               analise[disc].boas++;
             } else {
@@ -353,11 +358,11 @@
       html2pdf().from(tabela).set(opt).save();
     }
 
-    document.getElementById('bimestre').addEventListener('change', e => {
-      carregarDados(e.target.value);
+    document.getElementById('bimestre').addEventListener('change', (event) => {
+      carregarDados(event.target.value);
     });
 
-    carregarDados(1);
+    carregarDados(1);  // Carregar dados do 1º Bimestre por padrão
   </script>
 
 </body>
