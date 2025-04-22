@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <title>Dashboard de Notas por Bimestre</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -66,6 +67,19 @@
       cursor: pointer;
     }
     #voltarBtn:hover {
+      background-color: #004d40;
+    }
+    .download-btn {
+      margin-top: 10px;
+      padding: 10px 20px;
+      background-color: #00796b;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-right: 10px;
+    }
+    .download-btn:hover {
       background-color: #004d40;
     }
   </style>
@@ -285,6 +299,7 @@
           html += '</tr>';
         }
         html += '</table>';
+        html += `<button class="download-btn" onclick="baixarPDF('tabelaNotasVermelhas')">Baixar PDF</button>`;
       }
 
       // Sem notas
@@ -315,6 +330,7 @@
           html += '</tr>';
         }
         html += '</table>';
+        html += `<button class="download-btn" onclick="baixarPDF('tabelaSemNotas')">Baixar PDF</button>`;
       }
 
       // Risco de retenção
@@ -340,17 +356,28 @@
           html += '</tr>';
         });
         html += '</table>';
+        html += `<button class="download-btn" onclick="baixarPDF('tabelaRiscoRetencao')">Baixar PDF</button>`;
       }
 
       tabelaContainer.innerHTML = html;
     }
 
-    document.getElementById('bimestre').addEventListener('change', e => {
-      carregarDados(e.target.value);
+    function baixarPDF(tabelaId) {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      doc.html(document.getElementById(tabelaId), {
+        callback: function (doc) {
+          doc.save(`${tabelaId}.pdf`);
+        },
+        margin: 10
+      });
+    }
+
+    document.getElementById('bimestre').addEventListener('change', function() {
+      carregarDados(this.value);
     });
 
-    carregarDados(1);
+    carregarDados(1); // Carrega dados do 1º bimestre por padrão
   </script>
-
 </body>
 </html>
