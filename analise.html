@@ -289,90 +289,29 @@
         html += '</tr>';
         for (const aluno in vermelhasPorAluno) {
           const disciplinas = vermelhasPorAluno[aluno];
-          const destaque = disciplinas.length >= 4;
-          const linhaStyle = destaque ? ' style="background-color: yellow;"' : '';
-          const nomeStyle = destaque ? ' style="color:red; font-weight:bold;"' : '';
-          html += `<tr${linhaStyle}><td${nomeStyle}>${aluno}</td>`;
+          html += `<tr><td>${aluno}</td>`;
           for (let i = 0; i < maxVermelhas; i++) {
             html += `<td>${disciplinas[i] || ''}</td>`;
           }
           html += '</tr>';
         }
         html += '</table>';
-        html += `<button class="download-btn" onclick="baixarPDF('tabelaNotasVermelhas')">Baixar PDF</button>`;
-      }
-
-      // Sem notas
-      const semNotaPorAluno = {};
-      semNotas.forEach(item => {
-        if (!semNotaPorAluno[item.aluno]) {
-          semNotaPorAluno[item.aluno] = [];
-        }
-        semNotaPorAluno[item.aluno].push(item.disciplina);
-      });
-
-      if (semNotas.length === 0) {
-        html += '<p><em>Todos os alunos têm notas lançadas.</em></p>';
-      } else {
-        html += '<h2>Alunos Sem Nota Lançada</h2>';
-        const maxSemNotas = Math.max(...Object.values(semNotaPorAluno).map(arr => arr.length));
-        html += '<table id="tabelaSemNotas"><tr><th>Aluno</th>';
-        for (let i = 1; i <= maxSemNotas; i++) {
-          html += `<th>Disciplina ${i}</th>`;
-        }
-        html += '</tr>';
-        for (const aluno in semNotaPorAluno) {
-          const disciplinas = semNotaPorAluno[aluno];
-          html += `<tr><td>${aluno}</td>`;
-          for (let i = 0; i < maxSemNotas; i++) {
-            html += `<td>${disciplinas[i] || ''}</td>`;
-          }
-          html += '</tr>';
-        }
-        html += '</table>';
-        html += `<button class="download-btn" onclick="baixarPDF('tabelaSemNotas')">Baixar PDF</button>`;
-      }
-
-      // Risco de retenção
-      if (riscoRetencao.length === 0) {
-        html += '<p><em>Nenhum aluno com risco de retenção neste bimestre.</em></p>';
-      } else {
-        html += '<h2>Risco de Retenção</h2>';
-        html += '<table id="tabelaRiscoRetencao"><tr><th>Aluno</th>';
-        const maxNotas = Math.max(...riscoRetencao.map(item => item.disciplinas.length));
-        for (let i = 1; i <= maxNotas; i++) {
-          html += `<th>Nota ${i}</th>`;
-        }
-        html += '</tr>';
-        riscoRetencao.forEach(item => {
-          html += `<tr><td>${item.aluno}</td>`;
-          item.disciplinas.forEach(disciplina => {
-            html += `<td>${disciplina.disciplina} (${disciplina.nota})</td>`;
-          });
-          const colunasRestantes = maxNotas - item.disciplinas.length;
-          for (let i = 0; i < colunasRestantes; i++) {
-            html += '<td></td>';
-          }
-          html += '</tr>';
-        });
-        html += '</table>';
-        html += `<button class="download-btn" onclick="baixarPDF('tabelaRiscoRetencao')">Baixar PDF</button>`;
+        html += `<button class="download-btn" onclick="baixarPDF()">Baixar PDF</button>`;
       }
 
       tabelaContainer.innerHTML = html;
     }
 
-    function baixarPDF(tabelaId) {
+    function baixarPDF() {
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF();
-      const tabela = document.getElementById(tabelaId);
-      
-      doc.html(tabela, {
-        callback: function (doc) {
-          doc.save(`${tabelaId}.pdf`);
-        },
-        margin: 10
-      });
+      const tabela = document.getElementById('tabelaNotasVermelhas');
+
+      // Captura a tabela inteira e converte em PDF
+      doc.autoTable({ html: tabela });
+
+      // Salva o PDF
+      doc.save('notas_vermelhas.pdf');
     }
 
     document.getElementById('bimestre').addEventListener('change', function() {
