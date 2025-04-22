@@ -323,12 +323,13 @@
 
     function gerarPDF(tabelaId) {
       const tabela = document.getElementById(tabelaId);
-      
+
+      // Usando html2pdf.js para gerar o PDF diretamente
       const opt = {
         margin:       1,
         filename:     `${tabelaId}.pdf`,
         html2canvas:  { scale: 2 },
-        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' } // A4 horizontal
       };
 
       html2pdf().from(tabela).set(opt).save();
