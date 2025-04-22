@@ -117,6 +117,7 @@
         const todasDisciplinas = new Set();
         const notasVermelhas = [];
         const semNotas = [];
+        const riscoRetencao = [];
         let encontrouNota = false;
 
         for (const id in dados) {
@@ -173,7 +174,7 @@
         }
 
         atualizarGrafico(analise);
-        gerarTabelas(notasVermelhas, semNotas);
+        gerarTabelas(notasVermelhas, semNotas, riscoRetencao);
       } catch (error) {
         mensagem.textContent = 'Erro ao carregar os dados.';
         console.error(error);
@@ -241,7 +242,7 @@
       });
     }
 
-    function gerarTabelas(notas, semNotas) {
+    function gerarTabelas(notas, semNotas, riscoRetencao) {
       let html = '';
 
       const vermelhasPorAluno = {};
@@ -312,6 +313,20 @@
           html += '</tr>';
         }
 
+        html += '</table>';
+      }
+
+      // Tabela de Risco de Retenção
+      html += '<h2>Risco de Retenção</h2>';
+      const alunosRisco = Object.keys(vermelhasPorAluno).filter(aluno => vermelhasPorAluno[aluno].length >= 4);
+      
+      if (alunosRisco.length === 0) {
+        html += '<p><em>Nenhum aluno com risco de retenção.</em></p>';
+      } else {
+        html += '<table><tr><th>Aluno</th><th>Notas Vermelhas</th></tr>';
+        alunosRisco.forEach(aluno => {
+          html += `<tr><td>${aluno}</td><td>${vermelhasPorAluno[aluno].join(', ')}</td></tr>`;
+        });
         html += '</table>';
       }
 
