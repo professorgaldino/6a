@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <title>Dashboard de Notas por Bimestre</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -68,6 +69,18 @@
     #voltarBtn:hover {
       background-color: #004d40;
     }
+    .pdf-btn {
+      margin-top: 20px;
+      padding: 10px 20px;
+      background-color: #00796b;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .pdf-btn:hover {
+      background-color: #004d40;
+    }
   </style>
 </head>
 <body>
@@ -93,6 +106,10 @@
   <div id="tabela-container"></div>
 
   <button id="voltarBtn" onclick="window.location.href='index.html';">Voltar à Sala</button>
+
+  <button class="pdf-btn" id="gerarPdfBtn">Gerar PDF para Notas Vermelhas</button>
+  <button class="pdf-btn" id="gerarPdfRisco">Gerar PDF para Risco de Retenção</button>
+  <button class="pdf-btn" id="gerarPdfSemNotas">Gerar PDF para Alunos Sem Nota</button>
 
   <script>
     const chartCanvas = document.getElementById('graficoNotas');
@@ -315,11 +332,50 @@
         html += '</table>';
       }
 
+      // Nova tabela para "Risco de Retenção"
+      const riscoRetencao = Object.entries(vermelhasPorAluno).filter(([aluno, notas]) => notas.length >= 4);
+      if (riscoRetencao.length > 0) {
+        html += '<h2>Risco de Retenção</h2>';
+        html += '<table><tr><th>Aluno</th><th>Notas Vermelhas</th></tr>';
+        riscoRetencao.forEach(([aluno, notas]) => {
+          html += `<tr><td>${aluno}</td><td>${notas.join(', ')}</td></tr>`;
+        });
+        html += '</table>';
+      }
+
       tabelaContainer.innerHTML = html;
+    }
+
+    function gerarPdf(tabelaId) {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      const tabelaHTML = document.getElementById(tabelaId).outerHTML;
+      doc.html(tabelaHTML, {
+        callback: function (doc) {
+          const data = new Date();
+          const dataHora = `${data.getDate()}/${data.getMonth() + 1}/${data.getFullYear()} ${data.getHours()}:${data.getMinutes()}`;
+          doc.text(`Data e Hora de Impressão: ${dataHora}`, 10, doc.internal.pageSize.height - 10);
+          doc.save(`relatorio_${tabelaId}.pdf`);
+        },
+        x: 10,
+        y: 10
+      });
     }
 
     document.getElementById('bimestre').addEventListener('change', e => {
       carregarDados(e.target.value);
+    });
+
+    document.getElementById('gerarPdfBtn').addEventListener('click', () => {
+      gerarPdf('tabelaNotasVermelhas');
+    });
+
+    document.getElementById('gerarPdfRisco').addEventListener('click', () => {
+      gerarPdf('tabelaRiscoRetencao');
+    });
+
+    document.getElementById('gerarPdfSemNotas').addEventListener('click', () => {
+      gerarPdf('tabelaAlunosSemNotas');
     });
 
     carregarDados(1);
