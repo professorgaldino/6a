@@ -289,36 +289,92 @@
         html += '</tr>';
         for (const aluno in vermelhasPorAluno) {
           const disciplinas = vermelhasPorAluno[aluno];
-          html += `<tr><td>${aluno}</td>`;
+          const destaque = disciplinas.length >= 4;
+          const linhaStyle = destaque ? ' style="background-color: yellow;"' : '';
+          const nomeStyle = destaque ? ' style="color:red; font-weight:bold;"' : '';
+          html += `<tr${linhaStyle}><td${nomeStyle}>${aluno}</td>`;
           for (let i = 0; i < maxVermelhas; i++) {
             html += `<td>${disciplinas[i] || ''}</td>`;
           }
           html += '</tr>';
         }
         html += '</table>';
-        html += `<button class="download-btn" onclick="baixarPDF()">Baixar PDF</button>`;
+        html += `<button class="download-btn" onclick="baixarPDF('tabelaNotasVermelhas')">Baixar PDF</button>`;
+      }
+
+      // Sem notas
+      const semNotaPorAluno = {};
+      semNotas.forEach(item => {
+        if (!semNotaPorAluno[item.aluno]) {
+          semNotaPorAluno[item.aluno] = [];
+        }
+        semNotaPorAluno[item.aluno].push(item.disciplina);
+      });
+
+      if (semNotas.length === 0) {
+        html += '<p><em>Todos os alunos têm notas lançadas.</em></p>';
+      } else {
+        html += '<h2>Alunos Sem Nota Lançada</h2>';
+        const maxSemNotas = Math.max(...Object.values(semNotaPorAluno).map(arr => arr.length));
+        html += '<table id="tabelaSemNotas"><tr><th>Aluno</th>';
+        for (let i = 1; i <= maxSemNotas; i++) {
+          html += `<th>Disciplina ${i}</th>`;
+        }
+        html += '</tr>';
+        for (const aluno in semNotaPorAluno) {
+          const disciplinas = semNotaPorAluno[aluno];
+          html += `<tr><td>${aluno}</td>`;
+          for (let i = 0; i < maxSemNotas; i++) {
+            html += `<td>${disciplinas[i] || ''}</td>`;
+          }
+          html += '</tr>';
+        }
+        html += '</table>';
+        html += `<button class="download-btn" onclick="baixarPDF('tabelaSemNotas')">Baixar PDF</button>`;
+      }
+
+      // Risco de retenção
+      if (riscoRetencao.length === 0) {
+        html += '<p><em>Nenhum aluno em risco de retenção neste bimestre.</em></p>';
+      } else {
+        html += '<h2>Alunos em Risco de Retenção</h2>';
+        html += '<table id="tabelaRiscoRetencao"><tr><th>Aluno</th><th>Disciplinas com Nota Vermelha</th></tr>';
+        riscoRetencao.forEach(item => {
+          html += `<tr><td>${item.aluno}</td><td>`;
+          item.disciplinas.forEach(disc => {
+            html += `${disc.disciplina} (${disc.nota}), `;
+          });
+          html = html.slice(0, -2); // Remover a última vírgula
+          html += '</td></tr>';
+        });
+        html += '</table>';
+        html += `<button class="download-btn" onclick="baixarPDF('tabelaRiscoRetencao')">Baixar PDF</button>`;
       }
 
       tabelaContainer.innerHTML = html;
     }
 
-    function baixarPDF() {
+    function baixarPDF(tabelaId) {
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF();
-      const tabela = document.getElementById('tabelaNotasVermelhas');
+      const tabela = document.getElementById(tabelaId);
 
-      // Captura a tabela inteira e converte em PDF
-      doc.autoTable({ html: tabela });
-
-      // Salva o PDF
-      doc.save('notas_vermelhas.pdf');
+      doc.html(tabela, {
+        callback: function (doc) {
+          doc.save(`${tabelaId}.pdf`);
+        },
+        margin: 10
+      });
     }
 
-    document.getElementById('bimestre').addEventListener('change', function() {
-      carregarDados(this.value);
+    // Inicializa a página
+    document.getElementById('bimestre').addEventListener('change', (e) => {
+      carregarDados(e.target.value);
     });
 
-    carregarDados(1); // Carrega dados do 1º bimestre por padrão
+    // Carregar dados do primeiro bimestre ao carregar a página
+    carregarDados(1);
   </script>
+
 </body>
 </html>
