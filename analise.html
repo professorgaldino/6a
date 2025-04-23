@@ -4,9 +4,70 @@
   <meta charset="UTF-8">
   <title>Dashboard de Notas por Bimestre</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.5/xlsx.full.min.js"></script>
   <style>
-    /* Seus estilos permanecem os mesmos */
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background-color: #e0f7fa;
+      margin: 0;
+    }
+    h1 {
+      color: #333;
+    }
+    select {
+      padding: 5px;
+      font-size: 16px;
+      margin-top: 10px;
+    }
+    #mensagem {
+      margin-top: 20px;
+      color: red;
+      font-weight: bold;
+    }
+    #grafico-container {
+      max-width: 900px;
+      margin-top: 40px;
+      background-color: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 30px;
+      background-color: white;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: left;
+    }
+    th {
+      background-color: #eee;
+    }
+    h2 {
+      margin-top: 40px;
+    }
+    #logo {
+      position: absolute;
+      top: 10px;
+      right: 20px;
+      max-width: 150px;
+      opacity: 0.7;
+    }
+    #voltarBtn {
+      margin-top: 30px;
+      padding: 10px 20px;
+      background-color: #00796b;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    #voltarBtn:hover {
+      background-color: #004d40;
+    }
   </style>
 </head>
 <body>
@@ -44,7 +105,7 @@
       tabelaContainer.innerHTML = '';
 
       try {
-        const [dadosRes, alunosRes] = await Promise.all([  
+        const [dadosRes, alunosRes] = await Promise.all([
           fetch(`dados${bimestre}.json`),
           fetch(`alunos.json`)
         ]);
@@ -192,7 +253,6 @@
 
     function gerarTabelas(notas, semNotas, riscoRetencao) {
       let html = '';
-      let tableId = 0;
 
       // Notas vermelhas
       const vermelhasPorAluno = {};
@@ -208,21 +268,23 @@
       } else {
         html += '<h2>Alunos com Notas Vermelhas</h2>';
         const maxVermelhas = Math.max(...Object.values(vermelhasPorAluno).map(arr => arr.length));
-        html += '<table id="tabelaVermelhas"><tr><th>Aluno</th>';
+        html += '<table><tr><th>Aluno</th>';
         for (let i = 1; i <= maxVermelhas; i++) {
           html += `<th>Nota ${i}</th>`;
         }
         html += '</tr>';
         for (const aluno in vermelhasPorAluno) {
           const disciplinas = vermelhasPorAluno[aluno];
-          html += `<tr><td>${aluno}</td>`;
+          const destaque = disciplinas.length >= 4;
+          const linhaStyle = destaque ? ' style="background-color: yellow;"' : '';
+          const nomeStyle = destaque ? ' style="color:red; font-weight:bold;"' : '';
+          html += `<tr${linhaStyle}><td${nomeStyle}>${aluno}</td>`;
           for (let i = 0; i < maxVermelhas; i++) {
             html += `<td>${disciplinas[i] || ''}</td>`;
           }
           html += '</tr>';
         }
         html += '</table>';
-        html += `<button onclick="exportarExcel('tabelaVermelhas')">Exportar para Excel</button>`;
       }
 
       // Sem notas
@@ -239,7 +301,7 @@
       } else {
         html += '<h2>Alunos Sem Nota Lançada</h2>';
         const maxSemNotas = Math.max(...Object.values(semNotaPorAluno).map(arr => arr.length));
-        html += '<table id="tabelaSemNotas"><tr><th>Aluno</th>';
+        html += '<table><tr><th>Aluno</th>';
         for (let i = 1; i <= maxSemNotas; i++) {
           html += `<th>Disciplina ${i}</th>`;
         }
@@ -253,7 +315,6 @@
           html += '</tr>';
         }
         html += '</table>';
-        html += `<button onclick="exportarExcel('tabelaSemNotas')">Exportar para Excel</button>`;
       }
 
       // Risco de retenção
@@ -261,7 +322,7 @@
         html += '<p><em>Nenhum aluno com risco de retenção neste bimestre.</em></p>';
       } else {
         html += '<h2>Risco de Retenção</h2>';
-        html += '<table id="tabelaRisco"><tr><th>Aluno</th>';
+        html += '<table><tr><th>Aluno</th>';
         const maxNotas = Math.max(...riscoRetencao.map(item => item.disciplinas.length));
         for (let i = 1; i <= maxNotas; i++) {
           html += `<th>Nota ${i}</th>`;
@@ -279,16 +340,9 @@
           html += '</tr>';
         });
         html += '</table>';
-        html += `<button onclick="exportarExcel('tabelaRisco')">Exportar para Excel</button>`;
       }
 
       tabelaContainer.innerHTML = html;
-    }
-
-    function exportarExcel(tabelaId) {
-      const table = document.getElementById(tabelaId);
-      const wb = XLSX.utils.table_to_book(table, { sheet: "Sheet1" });
-      XLSX.writeFile(wb, `${tabelaId}.xlsx`);
     }
 
     document.getElementById('bimestre').addEventListener('change', e => {
