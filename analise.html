@@ -57,7 +57,7 @@
       max-width: 150px;
       opacity: 0.7;
     }
-    #voltarBtn, #btnResumo {
+    #voltarBtn, #btnResumo, #btnRisco {
       margin-top: 30px;
       padding: 10px 20px;
       background-color: #00796b;
@@ -67,7 +67,7 @@
       cursor: pointer;
       margin-right: 10px;
     }
-    #voltarBtn:hover, #btnResumo:hover {
+    #voltarBtn:hover, #btnResumo:hover, #btnRisco:hover {
       background-color: #004d40;
     }
     /* Modal */
@@ -134,14 +134,15 @@
     <canvas id="graficoNotas"></canvas>
   </div>
 
-  <div id="tabela-container"></div>
-
-  <button id="btnResumo">Resumo Geral da Sala</button>
-  <button id="voltarBtn" onclick="window.location.href='index.html';">Voltar à Sala</button>
+  <div>
+    <button id="btnResumo">Resumo Geral da Sala</button>
+    <button id="btnRisco">Alunos com Risco de Retenção</button>
+    <button id="voltarBtn" onclick="window.location.href='index.html';">Voltar à Sala</button>
+  </div>
 
   <!-- Modal -->
   <div id="resumoModal">
-    <h2>Resumo Geral das Médias (até 4 Bimestres)</h2>
+    <h2 id="tituloModal">Resumo Geral das Médias (até 4 Bimestres)</h2>
 
     <input type="text" id="filtroAluno" placeholder="Filtrar por nome do aluno..." />
 
@@ -341,6 +342,8 @@
     const conteudo = document.getElementById('conteudoResumo');
     conteudo.innerHTML = '<p>Carregando...</p>';
     document.getElementById('resumoModal').style.display = 'block';
+    document.getElementById('tituloModal').textContent = 'Resumo Geral das Médias (até 4 Bimestres)';
+    limparFiltro();
 
     try {
       const alunos = await fetch('alunos.json').then(r => r.json());
@@ -412,11 +415,101 @@
     }
   }
 
-  // Eventos do modal e botões adicionais
+  // NOVA FUNÇÃO para mostrar alunos com risco de retenção >= 4 disciplinas
+  async function gerarListaRisco() {
+    const conteudo = document.getElementById('conteudoResumo');
+    conteudo.innerHTML = '<p>Carregando...</p>';
+    document.getElementById('resumoModal').style.display = 'block';
+    document.getElementById('tituloModal').textContent = 'Alunos com Risco de Retenção (≥ 4 disciplinas)';
+    limparFiltro();
 
-  document.getElementById('btnResumo').addEventListener('click', () => {
-    gerarResumoGeral();
-  });
+    try {
+      const alunos = await fetch('alunos.json').then(r => r.json());
+      const bimestres = [1, 2, 3, 4];
+      const dadosBimestres = [];
+
+      for (const b of bimestres) {
+        try {
+          const resp = await fetch(`dados${b}.json`);
+          if (!resp.ok) throw new Error();
+          const dados = await resp.json();
+          dadosBimestres.push({ bimestre: b, dados });
+        } catch {
+          // Ignorar bimestres não disponíveis
+        }
+      }
+
+      const medias = {};
+
+      for (const { bimestre, dados } of dadosBimestres) {
+        for (const id in dados) {
+          if (!medias[id]) medias[id] = {};
+          for (const disc in dados[id]) {
+            const notaStr = dados[id][disc]?.notas?.[bimestre - 1];
+            const nota = parseFloat(notaStr);
+            if (!medias[id][disc]) medias[id][disc] = { soma: 0, count: 0 };
+            if (!isNaN(nota)) {
+              medias[id][disc].soma += nota;
+              medias[id][disc].count += 1;
+            }
+          }
+        }
+      }
+
+      // Filtrar alunos com nome válido e risco >= 4
+      const alunosRisco = {};
+      for (const id in medias) {
+        const nome = alunos[id]?.nome || '';
+        if (!nome || nome.toLowerCase().startsWith('id ')) continue; // Ignorar IDs sem nome válido
+
+        let riscoCount = 0;
+        for (const disc in medias[id]) {
+          const media = medias[id][disc].soma / medias[id][disc].count;
+          if (media < 5) riscoCount++;
+        }
+        if (riscoCount >= 4) {
+          alunosRisco[id] = { nome, riscoCount, disciplinas: medias[id] };
+        }
+      }
+
+      if (Object.keys(alunosRisco).length === 0) {
+        conteudo.innerHTML = '<p>Nenhum aluno com risco de retenção em 4 ou mais disciplinas encontrado.</p>';
+        return;
+      }
+
+      let html = '';
+      for (const id in alunosRisco) {
+        const { nome, riscoCount, disciplinas } = alunosRisco[id];
+        html += `<h3>${nome} <span style="color:red; font-weight:bold;">🛑 RISCO DE RETENÇÃO (${riscoCount} disciplinas)</span></h3>`;
+        html += '<table><tr><th>Disciplina</th><th>Total</th><th>Média</th><th>Status</th></tr>';
+        for (const disc in disciplinas) {
+          const { soma, count } = disciplinas[disc];
+          const media = soma / count;
+          const status = media < 5
+            ? '<span style="color:red; font-weight:bold;">RISCO DE RETENÇÃO</span>'
+            : '<span style="color:green; font-weight:bold;">APROVADO</span>';
+          html += `<tr><td>${disc}</td><td>${soma.toFixed(1)}</td><td>${media.toFixed(2)}</td><td>${status}</td></tr>`;
+        }
+        html += '</table><br>';
+      }
+
+      conteudo.innerHTML = html;
+
+    } catch (e) {
+      conteudo.innerHTML = '<p style="color:red;">Erro ao carregar a lista de risco.</p>';
+      console.error(e);
+    }
+  }
+
+  function limparFiltro() {
+    const filtro = document.getElementById('filtroAluno');
+    filtro.value = '';
+    filtro.dispatchEvent(new Event('input'));
+  }
+
+  // Eventos do modal e botões
+  document.getElementById('btnResumo').addEventListener('click', gerarResumoGeral);
+  document.getElementById('btnRisco').addEventListener('click', gerarListaRisco);
 
   document.getElementById('btnFecharModal').addEventListener('click', () => {
     document.getElementById('resumoModal').style.display = 'none';
