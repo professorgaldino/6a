@@ -56,7 +56,7 @@
       max-width: 150px;
       opacity: 0.7;
     }
-    #voltarBtn {
+    #voltarBtn, #btnResumo {
       margin-top: 30px;
       padding: 10px 20px;
       background-color: #00796b;
@@ -64,9 +64,40 @@
       border: none;
       border-radius: 5px;
       cursor: pointer;
+      margin-right: 10px;
     }
-    #voltarBtn:hover {
+    #voltarBtn:hover, #btnResumo:hover {
       background-color: #004d40;
+    }
+    #resumoModal {
+      display: none;
+      position: fixed;
+      top: 5%;
+      left: 5%;
+      width: 90%;
+      height: 90%;
+      overflow: auto;
+      background: white;
+      border: 2px solid #000;
+      padding: 20px;
+      z-index: 1000;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.2);
+    }
+    #resumoModal table {
+      background-color: white;
+    }
+    #resumoModal button {
+      margin-top: 20px;
+      padding: 8px 16px;
+      background-color: #f44336;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    #resumoModal button:hover {
+      background-color: #c62828;
     }
   </style>
 </head>
@@ -92,7 +123,15 @@
 
   <div id="tabela-container"></div>
 
+  <button id="btnResumo">Resumo Geral da Sala</button>
   <button id="voltarBtn" onclick="window.location.href='index.html';">Voltar à Sala</button>
+
+  <!-- Modal -->
+  <div id="resumoModal">
+    <h2>Resumo Geral das Médias (4 Bimestres)</h2>
+    <div id="conteudoResumo">Carregando...</div>
+    <button onclick="fecharModal()">Fechar</button>
+  </div>
 
   <script>
     const chartCanvas = document.getElementById('graficoNotas');
@@ -256,29 +295,17 @@
         html += '<p><em>Nenhum aluno com nota vermelha neste bimestre.</em></p>';
       } else {
         html += '<h2>Alunos com Notas Vermelhas</h2>';
-
-        const maxVermelhas = Math.max(...Object.values(vermelhasPorAluno).map(arr => arr.length));
-
+        const max = Math.max(...Object.values(vermelhasPorAluno).map(a => a.length));
         html += '<table><tr><th>Aluno</th>';
-        for (let i = 1; i <= maxVermelhas; i++) {
-          html += `<th>Nota ${i}</th>`;
-        }
+        for (let i = 1; i <= max; i++) html += `<th>Nota ${i}</th>`;
         html += '</tr>';
-
         for (const aluno in vermelhasPorAluno) {
           const disciplinas = vermelhasPorAluno[aluno];
           const destaque = disciplinas.length >= 4;
-
-          const linhaStyle = destaque ? ' style="background-color: yellow;"' : '';
-          const nomeStyle = destaque ? ' style="color:red; font-weight:bold;"' : '';
-
-          html += `<tr${linhaStyle}><td${nomeStyle}>${aluno}</td>`;
-          for (let i = 0; i < maxVermelhas; i++) {
-            html += `<td>${disciplinas[i] || ''}</td>`;
-          }
+          html += `<tr${destaque ? ' style="background-color: yellow;"' : ''}><td${destaque ? ' style="color:red; font-weight:bold;"' : ''}>${aluno}</td>`;
+          for (let i = 0; i < max; i++) html += `<td>${disciplinas[i] || ''}</td>`;
           html += '</tr>';
         }
-
         html += '</table>';
       }
 
@@ -294,33 +321,76 @@
         html += '<p><em>Todos os alunos têm notas lançadas.</em></p>';
       } else {
         html += '<h2>Alunos Sem Nota Lançada</h2>';
-
-        const maxSemNotas = Math.max(...Object.values(semNotaPorAluno).map(arr => arr.length));
-
+        const max = Math.max(...Object.values(semNotaPorAluno).map(a => a.length));
         html += '<table><tr><th>Aluno</th>';
-        for (let i = 1; i <= maxSemNotas; i++) {
-          html += `<th>Disciplina ${i}</th>`;
-        }
+        for (let i = 1; i <= max; i++) html += `<th>Disciplina ${i}</th>`;
         html += '</tr>';
-
         for (const aluno in semNotaPorAluno) {
           const disciplinas = semNotaPorAluno[aluno];
           html += `<tr><td>${aluno}</td>`;
-          for (let i = 0; i < maxSemNotas; i++) {
-            html += `<td>${disciplinas[i] || ''}</td>`;
-          }
+          for (let i = 0; i < max; i++) html += `<td>${disciplinas[i] || ''}</td>`;
           html += '</tr>';
         }
-
         html += '</table>';
       }
 
       tabelaContainer.innerHTML = html;
     }
 
+    async function gerarResumoGeral() {
+      const conteudo = document.getElementById('conteudoResumo');
+      conteudo.innerHTML = '<p>Carregando...</p>';
+      document.getElementById('resumoModal').style.display = 'block';
+
+      try {
+        const bimestres = [1, 2, 3, 4];
+        const dadosBimestres = await Promise.all(bimestres.map(b => fetch(`dados${b}.json`).then(r => r.json())));
+        const alunos = await fetch('alunos.json').then(r => r.json());
+
+        const medias = {};
+
+        for (let b = 0; b < 4; b++) {
+          const dados = dadosBimestres[b];
+          for (const id in dados) {
+            if (!medias[id]) medias[id] = {};
+            for (const disc in dados[id]) {
+              const notaStr = dados[id][disc]?.notas?.[b];
+              const nota = parseFloat(notaStr);
+              if (!medias[id][disc]) medias[id][disc] = 0;
+              if (!isNaN(nota)) medias[id][disc] += nota;
+            }
+          }
+        }
+
+        let html = '<table><tr><th>Aluno</th><th>Disciplina</th><th>Total</th><th>Média</th><th>Status</th></tr>';
+
+        for (const id in medias) {
+          const aluno = alunos[id]?.nome || `ID ${id}`;
+          for (const disc in medias[id]) {
+            const total = medias[id][disc];
+            const media = (total / 4).toFixed(2);
+            const risco = total < 20 ? '<span style="color:red; font-weight:bold;">RISCO DE RETENÇÃO</span>' : '';
+            html += `<tr><td>${aluno}</td><td>${disc}</td><td>${total.toFixed(1)}</td><td>${media}</td><td>${risco}</td></tr>`;
+          }
+        }
+
+        html += '</table>';
+        conteudo.innerHTML = html;
+      } catch (err) {
+        conteudo.innerHTML = '<p>Erro ao carregar os dados.</p>';
+        console.error(err);
+      }
+    }
+
+    function fecharModal() {
+      document.getElementById('resumoModal').style.display = 'none';
+    }
+
     document.getElementById('bimestre').addEventListener('change', e => {
       carregarDados(e.target.value);
     });
+
+    document.getElementById('btnResumo').addEventListener('click', gerarResumoGeral);
 
     carregarDados(1);
   </script>
