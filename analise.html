@@ -84,18 +84,21 @@
     <canvas id="graficoNotas"></canvas>
   </div>
   <div id="tabela-container"></div>
-  <button onclick="carregarDadosTodosBimestres()">Ver Risco de Retenção (Média Anual)</button>
+  <button onclick="carregarDadosTodosBimestres()">Ver Risco de Retenção (Média Acumulada)</button>
   <button onclick="window.location.href='index.html';">Voltar à Sala</button>
   <script>
     let graficoNotas;
+    let bimestreSelecionado = 1;
 
     async function carregarDados(bimestre) {
+      bimestreSelecionado = parseInt(bimestre);
       try {
         const res = await fetch(`dados${bimestre}.json`);
         const dados = await res.json();
         const alunos = await fetch('alunos.json').then(r => r.json());
         const disciplinas = new Set();
         const analise = {};
+        const vermelhos = {};
 
         for (const id in dados) {
           const nome = alunos[id]?.nome;
@@ -112,6 +115,7 @@
         for (const id in dados) {
           const nome = alunos[id]?.nome;
           if (!nome || !isNaN(nome)) continue;
+
           for (const disc of disciplinas) {
             const notaStr = dados[id][disc]?.notas?.[bimestre - 1];
             const nota = parseFloat(notaStr);
@@ -121,11 +125,27 @@
               analise[disc].boas++;
             } else {
               analise[disc].ruins++;
+              if (!vermelhos[nome]) vermelhos[nome] = [];
+              vermelhos[nome].push(`${disc} (${nota.toFixed(1)})`);
             }
           }
         }
 
         atualizarGrafico(analise);
+
+        let html = '';
+
+        if (Object.keys(vermelhos).length > 0) {
+          html += '<h2>Notas Vermelhas no Bimestre</h2>';
+          html += '<table><tr><th>Aluno</th><th>🔴 Disciplinas com Nota < 5</th></tr>';
+          for (const nome in vermelhos) {
+            html += `<tr><td>${nome}</td><td>${vermelhos[nome].join(', ')}</td></tr>`;
+          }
+          html += '</table>';
+        }
+
+        document.getElementById('tabela-container').innerHTML = html;
+
       } catch (error) {
         document.getElementById('mensagem').textContent = 'Erro ao carregar os dados.';
         console.error(error);
@@ -162,7 +182,7 @@
       try {
         const alunos = await fetch('alunos.json').then(r => r.json());
         const dadosBimestres = [];
-        for (let i = 1; i <= 4; i++) {
+        for (let i = 1; i <= bimestreSelecionado; i++) {
           try {
             const res = await fetch(`dados${i}.json`);
             if (res.ok) {
@@ -198,16 +218,15 @@
           todasDisciplinas.forEach(disc => {
             let soma = 0;
             let count = 0;
-            for (const dados of dadosBimestres) {
+            for (let b = 0; b < bimestreSelecionado; b++) {
+              const dados = dadosBimestres[b];
               if (!dados || !dados[id] || !dados[id][disc]) continue;
-              const notas = dados[id][disc].notas || [];
-              notas.forEach(n => {
-                const num = parseFloat(n);
-                if (!isNaN(num)) {
-                  soma += num;
-                  count++;
-                }
-              });
+              const nota = dados[id][disc].notas?.[b];
+              const num = parseFloat(nota);
+              if (!isNaN(num)) {
+                soma += num;
+                count++;
+              }
             }
             if (count > 0) {
               const media = soma / count;
@@ -229,7 +248,7 @@
           }
         }
 
-        let html = '<h2>Alunos com Risco de Retenção (Média Anual)</h2>';
+        let html = `<h2>Alunos com Risco de Retenção (Média até ${bimestreSelecionado}º Bimestre)</h2>`;
         html += '<table><tr><th>Aluno</th><th>🔴 Disciplinas com Média < 5</th></tr>';
         for (const nome in riscoRetencao) {
           html += `<tr><td>${nome}</td><td>${riscoRetencao[nome].join(', ')}</td></tr>`;
