@@ -5,7 +5,69 @@
   <title>Dashboard de Notas por Bimestre</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    /* seu CSS aqui (igual ao anterior) */
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background-color: #e0f7fa;
+      margin: 0;
+    }
+    h1 {
+      color: #333;
+    }
+    select {
+      padding: 5px;
+      font-size: 16px;
+      margin-top: 10px;
+    }
+    #mensagem {
+      margin-top: 20px;
+      color: red;
+      font-weight: bold;
+    }
+    #grafico-container {
+      max-width: 900px;
+      margin-top: 40px;
+      background-color: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 30px;
+      background-color: white;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: left;
+    }
+    th {
+      background-color: #eee;
+    }
+    h2 {
+      margin-top: 40px;
+    }
+    #logo {
+      position: absolute;
+      top: 10px;
+      right: 20px;
+      max-width: 150px;
+      opacity: 0.7;
+    }
+    #voltarBtn {
+      margin-top: 30px;
+      padding: 10px 20px;
+      background-color: #00796b;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    #voltarBtn:hover {
+      background-color: #004d40;
+    }
   </style>
 </head>
 <body>
@@ -74,8 +136,7 @@
 
           const disciplinas = dados[id];
           todasDisciplinas.forEach(disc => {
-            // Aqui: sempre pegar o índice 0, primeiro bimestre
-            const notaStr = disciplinas?.[disc]?.notas?.[0];
+            const notaStr = disciplinas?.[disc]?.notas?.[bimestre - 1];
             const nota = parseFloat(notaStr);
 
             if (notaStr === '-' || notaStr === undefined || isNaN(nota)) {
@@ -248,7 +309,7 @@
           for (let i = 0; i < maxSemNotas; i++) {
             html += `<td>${disciplinas[i] || ''}</td>`;
           }
-          html += '</tr>`;
+          html += '</tr>';
         }
 
         html += '</table>';
