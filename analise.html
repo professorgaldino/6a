@@ -117,6 +117,7 @@
         const alunos = await fetch('alunos.json').then(r => r.json());
         const disciplinas = new Set();
         const analise = {};
+        const semNotas = [];
 
         for (const id in dados) {
           for (const disc in dados[id]) {
@@ -134,6 +135,7 @@
             const nota = parseFloat(notaStr);
             if (!notaStr || notaStr === '-' || isNaN(nota)) {
               analise[disc].semnota++;
+              semNotas.push({ aluno: alunos[id]?.nome || id, disciplina: disc });
             } else if (nota >= 5) {
               analise[disc].boas++;
             } else {
@@ -143,6 +145,7 @@
         }
 
         atualizarGrafico(analise);
+        gerarTabelaSemNotas(semNotas);
       } catch (error) {
         document.getElementById('mensagem').textContent = 'Erro ao carregar os dados.';
         console.error(error);
@@ -173,6 +176,17 @@
           scales: { y: { beginAtZero: true } }
         }
       });
+    }
+
+    function gerarTabelaSemNotas(lista) {
+      if (lista.length === 0) return;
+      let html = '<h2>Alunos Sem Nota Lançada</h2>';
+      html += '<table><tr><th>Aluno</th><th>Disciplina</th></tr>';
+      lista.forEach(item => {
+        html += `<tr><td>${item.aluno}</td><td>${item.disciplina}</td></tr>`;
+      });
+      html += '</table>';
+      document.getElementById('tabela-container').innerHTML = html;
     }
 
     async function gerarResumoGeral() {
