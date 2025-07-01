@@ -144,8 +144,8 @@
             const nota = parseFloat(notaStr);
             if (!notaStr || notaStr === '-' || isNaN(nota)) {
               analise[disc].semnota++;
-              if (!semNotas[nome]) semNotas[nome] = [];
-              semNotas[nome].push(disc);
+              if (!semNotas[nome]) semNotas[nome] = new Set();
+              semNotas[nome].add(disc);
             } else if (nota >= 5) {
               analise[disc].boas++;
             } else {
@@ -200,13 +200,13 @@
 
       let html = '<h2>Alunos Sem Nota Lançada</h2>';
       html += '<table><tr><th>Aluno</th>';
-      const maxCols = Math.max(...Object.values(lista).map(arr => arr.length));
+      const maxCols = Math.max(...Object.values(lista).map(arr => arr.size));
       for (let i = 0; i < maxCols; i++) html += `<th>Disciplina ${i+1}</th>`;
       html += '</tr>';
 
       nomes.forEach(nome => {
+        const disciplinas = Array.from(lista[nome]);
         html += `<tr><td>${nome}</td>`;
-        const disciplinas = lista[nome];
         for (let i = 0; i < maxCols; i++) {
           html += `<td>${disciplinas[i] || ''}</td>`;
         }
