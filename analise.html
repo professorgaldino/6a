@@ -67,26 +67,18 @@
     button:hover {
       background-color: #004d40;
     }
-    #resumoModal {
-      display: none;
-      position: fixed;
-      top: 5%;
-      left: 5%;
-      width: 90%;
-      height: 90%;
-      overflow: auto;
-      background: white;
-      border: 2px solid #000;
-      padding: 20px;
-      z-index: 1000;
-      border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.2);
-    }
   </style>
 </head>
 <body>
   <img id="logo" src="logoescola.jpeg" alt="Logo da Escola" />
   <h1>Dashboard de Notas</h1>
+  <label for="bimestre">Selecione o bimestre:</label>
+  <select id="bimestre">
+    <option value="1">1º Bimestre</option>
+    <option value="2">2º Bimestre</option>
+    <option value="3">3º Bimestre</option>
+    <option value="4">4º Bimestre</option>
+  </select>
   <p id="mensagem"></p>
   <div id="grafico-container">
     <canvas id="graficoNotas"></canvas>
@@ -95,6 +87,77 @@
   <button onclick="carregarDadosTodosBimestres()">Ver Risco de Retenção (Média Anual)</button>
   <button onclick="window.location.href='index.html';">Voltar à Sala</button>
   <script>
+    let graficoNotas;
+
+    async function carregarDados(bimestre) {
+      try {
+        const res = await fetch(`dados${bimestre}.json`);
+        const dados = await res.json();
+        const alunos = await fetch('alunos.json').then(r => r.json());
+        const disciplinas = new Set();
+        const analise = {};
+
+        for (const id in dados) {
+          const nome = alunos[id]?.nome;
+          if (!nome || !isNaN(nome)) continue;
+          for (const disc in dados[id]) {
+            disciplinas.add(disc);
+          }
+        }
+
+        disciplinas.forEach(disc => {
+          analise[disc] = { boas: 0, ruins: 0, semnota: 0 };
+        });
+
+        for (const id in dados) {
+          const nome = alunos[id]?.nome;
+          if (!nome || !isNaN(nome)) continue;
+          for (const disc of disciplinas) {
+            const notaStr = dados[id][disc]?.notas?.[bimestre - 1];
+            const nota = parseFloat(notaStr);
+            if (!notaStr || notaStr === '-' || isNaN(nota)) {
+              analise[disc].semnota++;
+            } else if (nota >= 5) {
+              analise[disc].boas++;
+            } else {
+              analise[disc].ruins++;
+            }
+          }
+        }
+
+        atualizarGrafico(analise);
+      } catch (error) {
+        document.getElementById('mensagem').textContent = 'Erro ao carregar os dados.';
+        console.error(error);
+      }
+    }
+
+    function atualizarGrafico(analise) {
+      const labels = Object.keys(analise);
+      const boas = labels.map(d => analise[d].boas);
+      const ruins = labels.map(d => analise[d].ruins);
+      const semnota = labels.map(d => analise[d].semnota);
+
+      if (graficoNotas) graficoNotas.destroy();
+
+      graficoNotas = new Chart(document.getElementById('graficoNotas'), {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            { label: 'Notas ≥ 5', data: boas, backgroundColor: 'green' },
+            { label: 'Notas < 5', data: ruins, backgroundColor: 'red' },
+            { label: 'Sem Nota', data: semnota, backgroundColor: 'gray' }
+          ]
+        },
+        options: {
+          responsive: true,
+          plugins: { title: { display: true, text: 'Análise de Notas por Disciplina' } },
+          scales: { y: { beginAtZero: true } }
+        }
+      });
+    }
+
     async function carregarDadosTodosBimestres() {
       try {
         const alunos = await fetch('alunos.json').then(r => r.json());
@@ -113,7 +176,6 @@
         }
 
         const mediasPorAluno = {};
-        const semNotas = {};
         const riscoRetencao = {};
         const todasDisciplinas = new Set();
 
@@ -180,6 +242,9 @@
         console.error(error);
       }
     }
+
+    document.getElementById('bimestre').addEventListener('change', e => carregarDados(e.target.value));
+    carregarDados(1);
   </script>
 </body>
 </html>
