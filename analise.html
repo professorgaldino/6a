@@ -84,11 +84,17 @@
     <canvas id="graficoNotas"></canvas>
   </div>
   <div id="tabela-container"></div>
-  <button onclick="carregarDadosTodosBimestres()">Ver Risco de Retenção (Média Acumulada)</button>
+  <div id="risco-container"></div>
+  <div id="semnota-container"></div>
   <button onclick="window.location.href='index.html';">Voltar à Sala</button>
   <script>
     let graficoNotas;
     let bimestreSelecionado = 1;
+
+    document.getElementById('bimestre').addEventListener('change', e => {
+      carregarDados(e.target.value);
+      carregarDadosTodosBimestres();
+    });
 
     async function carregarDados(bimestre) {
       bimestreSelecionado = parseInt(bimestre);
@@ -122,8 +128,8 @@
             const nota = parseFloat(notaStr);
             if (!notaStr || notaStr === '-' || isNaN(nota)) {
               analise[disc].semnota++;
-              if (!semNotas[disc]) semNotas[disc] = [];
-              semNotas[disc].push(nome);
+              if (!semNotas[nome]) semNotas[nome] = [];
+              semNotas[nome].push(disc);
             } else if (nota >= 5) {
               analise[disc].boas++;
             } else {
@@ -137,7 +143,6 @@
         atualizarGrafico(analise);
 
         let html = '';
-
         if (Object.keys(vermelhos).length > 0) {
           html += '<h2>Notas Vermelhas no Bimestre</h2>';
           html += '<table><tr><th>Aluno</th><th>🔴 Disciplinas com Nota < 5</th></tr>';
@@ -146,17 +151,18 @@
           }
           html += '</table>';
         }
-
-        if (Object.keys(semNotas).length > 0) {
-          html += '<h2>Disciplinas com Alunos Sem Nota</h2>';
-          html += '<table><tr><th>Disciplina</th><th>Alunos</th></tr>';
-          for (const disc in semNotas) {
-            html += `<tr><td>${disc}</td><td>${semNotas[disc].join(', ')}</td></tr>`;
-          }
-          html += '</table>';
-        }
-
         document.getElementById('tabela-container').innerHTML = html;
+
+        let htmlSem = '';
+        if (Object.keys(semNotas).length > 0) {
+          htmlSem += '<h2>Alunos com Disciplinas Sem Nota</h2>';
+          htmlSem += '<table><tr><th>Aluno</th><th>Disciplinas</th></tr>';
+          for (const nome in semNotas) {
+            htmlSem += `<tr><td>${nome}</td><td>${semNotas[nome].join(', ')}</td></tr>`;
+          }
+          htmlSem += '</table>';
+        }
+        document.getElementById('semnota-container').innerHTML = htmlSem;
 
       } catch (error) {
         document.getElementById('mensagem').textContent = 'Erro ao carregar os dados.';
@@ -190,10 +196,86 @@
       });
     }
 
-    // carregarDadosTodosBimestres permanece igual
+    async function carregarDadosTodosBimestres() {
+      try {
+        const alunos = await fetch('alunos.json').then(r => r.json());
+        const dadosBimestres = [];
+        for (let i = 1; i <= bimestreSelecionado; i++) {
+          try {
+            const res = await fetch(`dados${i}.json`);
+            dadosBimestres[i - 1] = res.ok ? await res.json() : null;
+          } catch {
+            dadosBimestres[i - 1] = null;
+          }
+        }
 
-    document.getElementById('bimestre').addEventListener('change', e => carregarDados(e.target.value));
+        const mediasPorAluno = {};
+        const riscoRetencao = {};
+        const todasDisciplinas = new Set();
+
+        for (const dados of dadosBimestres) {
+          if (!dados) continue;
+          for (const id in dados) {
+            const nome = alunos[id]?.nome;
+            if (!nome || !isNaN(nome)) continue;
+            for (const disc in dados[id]) {
+              todasDisciplinas.add(disc);
+            }
+          }
+        }
+
+        for (const id in alunos) {
+          const nome = alunos[id]?.nome;
+          if (!nome || !isNaN(nome)) continue;
+          mediasPorAluno[nome] = {};
+          todasDisciplinas.forEach(disc => {
+            let soma = 0, count = 0;
+            for (let b = 0; b < bimestreSelecionado; b++) {
+              const dados = dadosBimestres[b];
+              if (!dados || !dados[id] || !dados[id][disc]) continue;
+              const nota = dados[id][disc].notas?.[b];
+              const num = parseFloat(nota);
+              if (!isNaN(num)) {
+                soma += num;
+                count++;
+              }
+            }
+            if (count > 0) {
+              const media = soma / count;
+              mediasPorAluno[nome][disc] = media;
+            }
+          });
+        }
+
+        for (const nome in mediasPorAluno) {
+          const disciplinasBaixas = [];
+          for (const disc in mediasPorAluno[nome]) {
+            const media = mediasPorAluno[nome][disc];
+            if (media < 5) {
+              disciplinasBaixas.push(`${disc} (${media.toFixed(1)})`);
+            }
+          }
+          if (disciplinasBaixas.length >= 4) {
+            riscoRetencao[nome] = disciplinasBaixas;
+          }
+        }
+
+        let html = `<h2>Alunos com Risco de Retenção (Média até ${bimestreSelecionado}º Bimestre)</h2>`;
+        html += '<table><tr><th>Aluno</th><th>🔴 Disciplinas com Média < 5</th></tr>';
+        for (const nome in riscoRetencao) {
+          html += `<tr><td>${nome}</td><td>${riscoRetencao[nome].join(', ')}</td></tr>`;
+        }
+        html += '</table>';
+        document.getElementById('risco-container').innerHTML = html;
+
+      } catch (error) {
+        document.getElementById('mensagem').textContent = 'Erro ao carregar dados dos bimestres';
+        console.error(error);
+      }
+    }
+
     carregarDados(1);
+    carregarDadosTodosBimestres();
   </script>
 </body>
 </html>
