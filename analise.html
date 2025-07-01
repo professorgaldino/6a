@@ -138,6 +138,7 @@
           if (!nome || !isNaN(nome)) continue;
 
           let notasBaixas = 0;
+          let disciplinasBaixas = [];
 
           for (const disc of disciplinas) {
             const notaStr = dados[id][disc]?.notas?.[bimestre - 1];
@@ -151,11 +152,12 @@
             } else {
               analise[disc].ruins++;
               notasBaixas++;
+              disciplinasBaixas.push(disc);
             }
           }
 
           if (notasBaixas >= 4) {
-            riscoRetencao[nome] = notasBaixas;
+            riscoRetencao[nome] = disciplinasBaixas;
           }
         }
 
@@ -225,7 +227,8 @@
       html += '<table><tr><th>Aluno</th><th>🔴 Disciplinas com Nota < 5</th></tr>';
 
       nomes.forEach(nome => {
-        html += `<tr><td>${nome}</td><td>${lista[nome]}</td></tr>`;
+        const disciplinas = lista[nome].join(', ');
+        html += `<tr><td>${nome}</td><td>${disciplinas}</td></tr>`;
       });
 
       html += '</table>';
