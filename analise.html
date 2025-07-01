@@ -343,21 +343,38 @@
       document.getElementById('resumoModal').style.display = 'block';
 
       try {
-        const bimestres = [1, 2, 3, 4];
-        const dadosBimestres = await Promise.all(bimestres.map(b => fetch(`dados${b}.json`).then(r => r.json())));
         const alunos = await fetch('alunos.json').then(r => r.json());
+        const bimestres = [1, 2, 3, 4];
+        const dadosBimestres = [];
+        const bimestresDisponiveis = [];
+        const bimestresIndisponiveis = [];
+
+        for (const b of bimestres) {
+          try {
+            const resp = await fetch(`dados${b}.json`);
+            if (!resp.ok) throw new Error(`Bimestre ${b} indisponível`);
+            const dados = await resp.json();
+            dadosBimestres.push({ bimestre: b, dados });
+            bimestresDisponiveis.push(b);
+          } catch (err) {
+            console.warn(`dados${b}.json não disponível.`);
+            bimestresIndisponiveis.push(b);
+          }
+        }
 
         const medias = {};
 
-        for (let b = 0; b < 4; b++) {
-          const dados = dadosBimestres[b];
+        for (const { bimestre, dados } of dadosBimestres) {
           for (const id in dados) {
             if (!medias[id]) medias[id] = {};
             for (const disc in dados[id]) {
-              const notaStr = dados[id][disc]?.notas?.[b];
+              const notaStr = dados[id][disc]?.notas?.[bimestre - 1];
               const nota = parseFloat(notaStr);
-              if (!medias[id][disc]) medias[id][disc] = 0;
-              if (!isNaN(nota)) medias[id][disc] += nota;
+              if (!medias[id][disc]) medias[id][disc] = { soma: 0, count: 0 };
+              if (!isNaN(nota)) {
+                medias[id][disc].soma += nota;
+                medias[id][disc].count += 1;
+              }
             }
           }
         }
@@ -367,14 +384,19 @@
         for (const id in medias) {
           const aluno = alunos[id]?.nome || `ID ${id}`;
           for (const disc in medias[id]) {
-            const total = medias[id][disc];
-            const media = (total / 4).toFixed(2);
-            const risco = total < 20 ? '<span style="color:red; font-weight:bold;">RISCO DE RETENÇÃO</span>' : '';
-            html += `<tr><td>${aluno}</td><td>${disc}</td><td>${total.toFixed(1)}</td><td>${media}</td><td>${risco}</td></tr>`;
+            const { soma, count } = medias[id][disc];
+            const media = (soma / count).toFixed(2);
+            const risco = soma < 20 ? '<span style="color:red; font-weight:bold;">RISCO DE RETENÇÃO</span>' : '';
+            html += `<tr><td>${aluno}</td><td>${disc}</td><td>${soma.toFixed(1)}</td><td>${media}</td><td>${risco}</td></tr>`;
           }
         }
 
         html += '</table>';
+
+        if (bimestresIndisponiveis.length > 0) {
+          html += `<p style="margin-top: 20px;"><strong>Bimestres ainda não concluídos:</strong> ${bimestresIndisponiveis.join(', ')}º Bimestre(s)</p>`;
+        }
+
         conteudo.innerHTML = html;
       } catch (err) {
         conteudo.innerHTML = '<p>Erro ao carregar os dados.</p>';
