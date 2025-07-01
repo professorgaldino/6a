@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Dashboard de Notas por Bimestre</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -69,6 +70,7 @@
     #voltarBtn:hover, #btnResumo:hover {
       background-color: #004d40;
     }
+    /* Modal */
     #resumoModal {
       display: none;
       position: fixed;
@@ -99,11 +101,22 @@
     #resumoModal button:hover {
       background-color: #c62828;
     }
+    #filtroAluno {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 10px;
+      font-size: 16px;
+    }
+    #btnsResumo {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
   </style>
 </head>
 <body>
 
-  <img id="logo" src="logoescola.jpeg" alt="Logo da Escola">
+  <img id="logo" src="logoescola.jpeg" alt="Logo da Escola" />
 
   <h1>Dashboard de Notas</h1>
 
@@ -129,274 +142,338 @@
   <!-- Modal -->
   <div id="resumoModal">
     <h2>Resumo Geral das Médias (até 4 Bimestres)</h2>
+
+    <input type="text" id="filtroAluno" placeholder="Filtrar por nome do aluno..." />
+
+    <div id="btnsResumo">
+      <button id="btnOrdenarRisco">Ordenar por Risco de Retenção</button>
+      <button id="btnExportarPDF">Exportar PDF</button>
+      <button id="btnFecharModal">Fechar</button>
+    </div>
+
     <div id="conteudoResumo">Carregando...</div>
-    <button onclick="document.getElementById('resumoModal').style.display='none'">Fechar</button>
   </div>
 
-  <script>
-    const chartCanvas = document.getElementById('graficoNotas');
-    const tabelaContainer = document.getElementById('tabela-container');
-    let graficoNotas = null;
+<script>
+  const chartCanvas = document.getElementById('graficoNotas');
+  const tabelaContainer = document.getElementById('tabela-container');
+  let graficoNotas = null;
 
-    async function carregarDados(bimestre) {
-      const mensagem = document.getElementById('mensagem');
-      mensagem.textContent = 'Carregando...';
-      tabelaContainer.innerHTML = '';
+  async function carregarDados(bimestre) {
+    const mensagem = document.getElementById('mensagem');
+    mensagem.textContent = 'Carregando...';
+    tabelaContainer.innerHTML = '';
 
-      try {
-        const [dadosRes, alunosRes] = await Promise.all([
-          fetch(`dados${bimestre}.json`),
-          fetch(`alunos.json`)
-        ]);
+    try {
+      const [dadosRes, alunosRes] = await Promise.all([
+        fetch(`dados${bimestre}.json`),
+        fetch(`alunos.json`)
+      ]);
 
-        const dados = await dadosRes.json();
-        const alunos = await alunosRes.json();
+      const dados = await dadosRes.json();
+      const alunos = await alunosRes.json();
 
-        const analise = {};
-        const todasDisciplinas = new Set();
-        const notasVermelhas = [];
-        const semNotas = [];
-        let encontrouNota = false;
+      const analise = {};
+      const todasDisciplinas = new Set();
+      const notasVermelhas = [];
+      const semNotas = [];
+      let encontrouNota = false;
 
-        for (const id in dados) {
-          const disciplinas = dados[id];
-          for (const disc in disciplinas) {
-            todasDisciplinas.add(disc);
-          }
+      for (const id in dados) {
+        const disciplinas = dados[id];
+        for (const disc in disciplinas) {
+          todasDisciplinas.add(disc);
         }
-
-        todasDisciplinas.forEach(disc => {
-          analise[disc] = { boas: 0, ruins: 0, semnota: 0 };
-        });
-
-        for (const id in dados) {
-          const aluno = alunos[id];
-          if (!aluno) continue;
-
-          const disciplinas = dados[id];
-          todasDisciplinas.forEach(disc => {
-            const notaStr = disciplinas?.[disc]?.notas?.[bimestre - 1];
-            const nota = parseFloat(notaStr);
-
-            if (notaStr === '-' || notaStr === undefined || isNaN(nota)) {
-              analise[disc].semnota++;
-              semNotas.push({ aluno: aluno.nome, disciplina: disc });
-              return;
-            }
-
-            encontrouNota = true;
-
-            if (nota >= 5) {
-              analise[disc].boas++;
-            } else {
-              analise[disc].ruins++;
-              notasVermelhas.push({
-                aluno: aluno.nome,
-                disciplina: disc,
-                nota: nota.toFixed(1)
-              });
-            }
-          });
-        }
-
-        if (todasDisciplinas.size === 0) {
-          mensagem.textContent = 'Não há disciplinas disponíveis neste bimestre.';
-          if (graficoNotas) graficoNotas.destroy();
-          return;
-        }
-
-        if (!encontrouNota) {
-          mensagem.textContent = 'Nenhuma nota lançada neste bimestre. As disciplinas aparecerão zeradas.';
-        } else {
-          mensagem.textContent = '';
-        }
-
-        atualizarGrafico(analise);
-        gerarTabelas(notasVermelhas, semNotas);
-      } catch (error) {
-        mensagem.textContent = 'Erro ao carregar os dados.';
-        console.error(error);
-        if (graficoNotas) graficoNotas.destroy();
       }
-    }
 
-    function atualizarGrafico(analise) {
-      const labels = Object.keys(analise);
-      const boas = labels.map(d => analise[d].boas);
-      const ruins = labels.map(d => analise[d].ruins);
-      const semnota = labels.map(d => analise[d].semnota);
+      todasDisciplinas.forEach(disc => {
+        analise[disc] = { boas: 0, ruins: 0, semnota: 0 };
+      });
 
+      for (const id in dados) {
+        const aluno = alunos[id];
+        if (!aluno) continue;
+
+        const disciplinas = dados[id];
+        todasDisciplinas.forEach(disc => {
+          const notaStr = disciplinas?.[disc]?.notas?.[bimestre - 1];
+          const nota = parseFloat(notaStr);
+
+          if (notaStr === '-' || notaStr === undefined || isNaN(nota)) {
+            analise[disc].semnota++;
+            semNotas.push({ aluno: aluno.nome, disciplina: disc });
+            return;
+          }
+
+          encontrouNota = true;
+
+          if (nota >= 5) {
+            analise[disc].boas++;
+          } else {
+            analise[disc].ruins++;
+            notasVermelhas.push({
+              aluno: aluno.nome,
+              disciplina: disc,
+              nota: nota.toFixed(1)
+            });
+          }
+        });
+      }
+
+      if (todasDisciplinas.size === 0) {
+        mensagem.textContent = 'Não há disciplinas disponíveis neste bimestre.';
+        if (graficoNotas) graficoNotas.destroy();
+        return;
+      }
+
+      if (!encontrouNota) {
+        mensagem.textContent = 'Nenhuma nota lançada neste bimestre. As disciplinas aparecerão zeradas.';
+      } else {
+        mensagem.textContent = '';
+      }
+
+      atualizarGrafico(analise);
+      gerarTabelas(notasVermelhas, semNotas);
+    } catch (error) {
+      mensagem.textContent = 'Erro ao carregar os dados.';
+      console.error(error);
       if (graficoNotas) graficoNotas.destroy();
+    }
+  }
 
-      graficoNotas = new Chart(chartCanvas, {
-        type: 'bar',
-        data: {
-          labels: labels,
-          datasets: [
-            {
-              label: 'Notas ≥ 5 (Satisfatórias)',
-              data: boas,
-              backgroundColor: 'green'
-            },
-            {
-              label: 'Notas < 5 (Vermelhas)',
-              data: ruins,
-              backgroundColor: 'red'
-            },
-            {
-              label: 'Sem Nota',
-              data: semnota,
-              backgroundColor: 'gray'
-            }
-          ]
-        },
-        options: {
-          responsive: true,
-          scales: {
-            y: {
-              beginAtZero: true,
-              title: {
-                display: true,
-                text: 'Quantidade de Alunos'
-              }
-            },
-            x: {
-              title: {
-                display: true,
-                text: 'Disciplinas'
-              }
-            }
+  function atualizarGrafico(analise) {
+    const labels = Object.keys(analise);
+    const boas = labels.map(d => analise[d].boas);
+    const ruins = labels.map(d => analise[d].ruins);
+    const semnota = labels.map(d => analise[d].semnota);
+
+    if (graficoNotas) graficoNotas.destroy();
+
+    graficoNotas = new Chart(chartCanvas, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: 'Notas ≥ 5 (Satisfatórias)',
+            data: boas,
+            backgroundColor: 'green'
           },
-          plugins: {
-            legend: {
-              position: 'top'
-            },
+          {
+            label: 'Notas < 5 (Vermelhas)',
+            data: ruins,
+            backgroundColor: 'red'
+          },
+          {
+            label: 'Sem Nota',
+            data: semnota,
+            backgroundColor: 'gray'
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          y: {
+            beginAtZero: true,
             title: {
               display: true,
-              text: 'Análise de Notas por Disciplina'
+              text: 'Quantidade de Alunos'
+            }
+          },
+          x: {
+            title: {
+              display: true,
+              text: 'Disciplinas'
             }
           }
+        },
+        plugins: {
+          legend: {
+            position: 'top'
+          },
+          title: {
+            display: true,
+            text: 'Análise de Notas por Disciplina'
+          }
         }
-      });
-    }
-
-    function gerarTabelas(notas, semNotas) {
-      let html = '';
-      const vermelhasPorAluno = {};
-      notas.forEach(item => {
-        if (!vermelhasPorAluno[item.aluno]) {
-          vermelhasPorAluno[item.aluno] = [];
-        }
-        vermelhasPorAluno[item.aluno].push(`${item.disciplina} (${item.nota})`);
-      });
-
-      if (notas.length > 0) {
-        html += '<h2>Alunos com Notas Vermelhas</h2><table><tr><th>Aluno</th><th>Notas</th></tr>';
-        for (const aluno in vermelhasPorAluno) {
-          const list = vermelhasPorAluno[aluno].join(', ');
-          html += `<tr><td>${aluno}</td><td>${list}</td></tr>`;
-        }
-        html += '</table>';
       }
+    });
+  }
 
-      if (semNotas.length > 0) {
-        html += '<h2>Alunos Sem Nota Lançada</h2><table><tr><th>Aluno</th><th>Disciplinas</th></tr>';
-        const semNotaPorAluno = {};
-        semNotas.forEach(item => {
-          if (!semNotaPorAluno[item.aluno]) semNotaPorAluno[item.aluno] = [];
-          semNotaPorAluno[item.aluno].push(item.disciplina);
-        });
-        for (const aluno in semNotaPorAluno) {
-          const list = semNotaPorAluno[aluno].join(', ');
-          html += `<tr><td>${aluno}</td><td>${list}</td></tr>`;
-        }
-        html += '</table>';
+  function gerarTabelas(notas, semNotas) {
+    let html = '';
+    const vermelhasPorAluno = {};
+    notas.forEach(item => {
+      if (!vermelhasPorAluno[item.aluno]) {
+        vermelhasPorAluno[item.aluno] = [];
       }
-
-      tabelaContainer.innerHTML = html;
-    }
-
-    async function gerarResumoGeral() {
-      const conteudo = document.getElementById('conteudoResumo');
-      conteudo.innerHTML = '<p>Carregando...</p>';
-      document.getElementById('resumoModal').style.display = 'block';
-
-      try {
-        const alunos = await fetch('alunos.json').then(r => r.json());
-        const bimestres = [1, 2, 3, 4];
-        const dadosBimestres = [];
-        const indisponiveis = [];
-
-        for (const b of bimestres) {
-          try {
-            const resp = await fetch(`dados${b}.json`);
-            if (!resp.ok) throw new Error();
-            const dados = await resp.json();
-            dadosBimestres.push({ bimestre: b, dados });
-          } catch {
-            indisponiveis.push(b);
-          }
-        }
-
-        const medias = {};
-
-        for (const { bimestre, dados } of dadosBimestres) {
-          for (const id in dados) {
-            if (!medias[id]) medias[id] = {};
-            for (const disc in dados[id]) {
-              const notaStr = dados[id][disc]?.notas?.[bimestre - 1];
-              const nota = parseFloat(notaStr);
-              if (!medias[id][disc]) medias[id][disc] = { soma: 0, count: 0 };
-              if (!isNaN(nota)) {
-                medias[id][disc].soma += nota;
-                medias[id][disc].count += 1;
-              }
-            }
-          }
-        }
-
-        let html = '';
-        for (const id in medias) {
-          const aluno = alunos[id]?.nome || `ID ${id}`;
-          let riscoContador = 0;
-          for (const disc in medias[id]) {
-            const media = medias[id][disc].soma / medias[id][disc].count;
-            if (media < 5) riscoContador++;
-          }
-          const alerta = riscoContador >= 4
-            ? ' <span style="color:red; font-weight:bold;">🛑 RISCO DE RETENÇÃO</span>'
-            : '';
-          html += `<h3>${aluno}${alerta}</h3>`;
-          html += '<table><tr><th>Disciplina</th><th>Total</th><th>Média</th><th>Status</th></tr>';
-          for (const disc in medias[id]) {
-            const { soma, count } = medias[id][disc];
-            const media = soma / count;
-            const status = media < 5
-              ? '<span style="color:red; font-weight:bold;">RISCO DE RETENÇÃO</span>'
-              : '<span style="color:green; font-weight:bold;">APROVADO</span>';
-            html += `<tr><td>${disc}</td><td>${soma.toFixed(1)}</td><td>${media.toFixed(2)}</td><td>${status}</td></tr>`;
-          }
-          html += '</table><br>';
-        }
-
-        if (indisponiveis.length > 0) {
-          html += `<p style="margin-top: 20px;"><strong>Bimestres ainda não concluídos:</strong> ${indisponiveis.join(', ')}º Bimestre(s)</p>`;
-        }
-
-        conteudo.innerHTML = html;
-      } catch (err) {
-        conteudo.innerHTML = '<p>Erro ao carregar os dados.</p>';
-        console.error(err);
-      }
-    }
-
-    document.getElementById('bimestre').addEventListener('change', e => {
-      carregarDados(e.target.value);
+      vermelhasPorAluno[item.aluno].push(`${item.disciplina} (${item.nota})`);
     });
 
-    document.getElementById('btnResumo').addEventListener('click', gerarResumoGeral);
+    if (notas.length > 0) {
+      html += '<h2>Alunos com Notas Vermelhas</h2><table><tr><th>Aluno</th><th>Notas</th></tr>';
+      for (const aluno in vermelhasPorAluno) {
+        const list = vermelhasPorAluno[aluno].join(', ');
+        html += `<tr><td>${aluno}</td><td>${list}</td></tr>`;
+      }
+      html += '</table>';
+    }
 
-    carregarDados(1);
-  </script>
+    if (semNotas.length > 0) {
+      html += '<h2>Alunos Sem Nota Lançada</h2><table><tr><th>Aluno</th><th>Disciplinas</th></tr>';
+      const semNotaPorAluno = {};
+      semNotas.forEach(item => {
+        if (!semNotaPorAluno[item.aluno]) semNotaPorAluno[item.aluno] = [];
+        semNotaPorAluno[item.aluno].push(item.disciplina);
+      });
+      for (const aluno in semNotaPorAluno) {
+        const list = semNotaPorAluno[aluno].join(', ');
+        html += `<tr><td>${aluno}</td><td>${list}</td></tr>`;
+      }
+      html += '</table>';
+    }
+
+    tabelaContainer.innerHTML = html;
+  }
+
+  async function gerarResumoGeral() {
+    const conteudo = document.getElementById('conteudoResumo');
+    conteudo.innerHTML = '<p>Carregando...</p>';
+    document.getElementById('resumoModal').style.display = 'block';
+
+    try {
+      const alunos = await fetch('alunos.json').then(r => r.json());
+      const bimestres = [1, 2, 3, 4];
+      const dadosBimestres = [];
+      const indisponiveis = [];
+
+      for (const b of bimestres) {
+        try {
+          const resp = await fetch(`dados${b}.json`);
+          if (!resp.ok) throw new Error();
+          const dados = await resp.json();
+          dadosBimestres.push({ bimestre: b, dados });
+        } catch {
+          indisponiveis.push(b);
+        }
+      }
+
+      const medias = {};
+
+      for (const { bimestre, dados } of dadosBimestres) {
+        for (const id in dados) {
+          if (!medias[id]) medias[id] = {};
+          for (const disc in dados[id]) {
+            const notaStr = dados[id][disc]?.notas?.[bimestre - 1];
+            const nota = parseFloat(notaStr);
+            if (!medias[id][disc]) medias[id][disc] = { soma: 0, count: 0 };
+            if (!isNaN(nota)) {
+              medias[id][disc].soma += nota;
+              medias[id][disc].count += 1;
+            }
+          }
+        }
+      }
+
+      let html = '';
+      for (const id in medias) {
+        const aluno = alunos[id]?.nome || `ID ${id}`;
+        let riscoContador = 0;
+        for (const disc in medias[id]) {
+          const media = medias[id][disc].soma / medias[id][disc].count;
+          if (media < 5) riscoContador++;
+        }
+        const alerta = riscoContador >= 4
+          ? ' <span style="color:red; font-weight:bold;">🛑 RISCO DE RETENÇÃO</span>'
+          : '';
+        html += `<h3>${aluno}${alerta}</h3>`;
+        html += '<table><tr><th>Disciplina</th><th>Total</th><th>Média</th><th>Status</th></tr>';
+        for (const disc in medias[id]) {
+          const { soma, count } = medias[id][disc];
+          const media = soma / count;
+          const status = media < 5
+            ? '<span style="color:red; font-weight:bold;">RISCO DE RETENÇÃO</span>'
+            : '<span style="color:green; font-weight:bold;">APROVADO</span>';
+          html += `<tr><td>${disc}</td><td>${soma.toFixed(1)}</td><td>${media.toFixed(2)}</td><td>${status}</td></tr>`;
+        }
+        html += '</table><br>';
+      }
+
+      if (indisponiveis.length > 0) {
+        html += `<p style="margin-top: 20px;"><strong>Bimestres ainda não concluídos:</strong> ${indisponiveis.join(', ')}º Bimestre(s)</p>`;
+      }
+
+      conteudo.innerHTML = html;
+
+    } catch (e) {
+      conteudo.innerHTML = '<p style="color:red;">Erro ao carregar o resumo geral.</p>';
+      console.error(e);
+    }
+  }
+
+  // Eventos do modal e botões adicionais
+
+  document.getElementById('btnResumo').addEventListener('click', () => {
+    gerarResumoGeral();
+  });
+
+  document.getElementById('btnFecharModal').addEventListener('click', () => {
+    document.getElementById('resumoModal').style.display = 'none';
+  });
+
+  document.getElementById('filtroAluno').addEventListener('input', () => {
+    const termo = document.getElementById('filtroAluno').value.toLowerCase();
+    const blocos = document.querySelectorAll('#conteudoResumo > h3');
+    blocos.forEach(h3 => {
+      const nome = h3.textContent.toLowerCase();
+      const tabela = h3.nextElementSibling;
+      const mostrar = nome.includes(termo);
+      h3.style.display = mostrar ? '' : 'none';
+      if(tabela) tabela.style.display = mostrar ? '' : 'none';
+    });
+  });
+
+  document.getElementById('btnOrdenarRisco').addEventListener('click', () => {
+    const conteudo = document.getElementById('conteudoResumo');
+    const blocos = Array.from(conteudo.querySelectorAll('h3')).map(h3 => {
+      const tabela = h3.nextElementSibling;
+      let riscoCount = 0;
+      if(tabela){
+        riscoCount = Array.from(tabela.querySelectorAll('tr td:last-child'))
+          .filter(td => td.textContent.includes('RISCO DE RETENÇÃO')).length;
+      }
+      return { h3, tabela, riscoCount };
+    });
+
+    blocos.sort((a, b) => b.riscoCount - a.riscoCount);
+
+    conteudo.innerHTML = '';
+    blocos.forEach(({ h3, tabela }) => {
+      conteudo.appendChild(h3);
+      if(tabela) conteudo.appendChild(tabela);
+      conteudo.appendChild(document.createElement('br'));
+    });
+  });
+
+  document.getElementById('btnExportarPDF').addEventListener('click', () => {
+    const elemento = document.getElementById('conteudoResumo');
+    const opt = {
+      margin: 0.5,
+      filename: 'resumo_boletim.pdf',
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2 },
+      jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+    };
+    html2pdf().set(opt).from(elemento).save();
+  });
+
+  document.getElementById('bimestre').addEventListener('change', e => {
+    carregarDados(e.target.value);
+  });
+
+  carregarDados(1);
+</script>
+
 </body>
 </html>
