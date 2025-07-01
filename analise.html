@@ -117,9 +117,12 @@
         const alunos = await fetch('alunos.json').then(r => r.json());
         const disciplinas = new Set();
         const analise = {};
-        const semNotas = [];
+        const semNotas = {};
 
         for (const id in dados) {
+          const nome = alunos[id]?.nome;
+          if (!nome || !isNaN(nome)) continue;
+
           for (const disc in dados[id]) {
             disciplinas.add(disc);
           }
@@ -130,12 +133,16 @@
         });
 
         for (const id in dados) {
+          const nome = alunos[id]?.nome;
+          if (!nome || !isNaN(nome)) continue;
+
           for (const disc of disciplinas) {
             const notaStr = dados[id][disc]?.notas?.[bimestre - 1];
             const nota = parseFloat(notaStr);
             if (!notaStr || notaStr === '-' || isNaN(nota)) {
               analise[disc].semnota++;
-              semNotas.push({ aluno: alunos[id]?.nome || id, disciplina: disc });
+              if (!semNotas[nome]) semNotas[nome] = [];
+              semNotas[nome].push(disc);
             } else if (nota >= 5) {
               analise[disc].boas++;
             } else {
@@ -179,76 +186,26 @@
     }
 
     function gerarTabelaSemNotas(lista) {
-      if (lista.length === 0) return;
+      const nomes = Object.keys(lista);
+      if (nomes.length === 0) return;
+
       let html = '<h2>Alunos Sem Nota Lançada</h2>';
-      html += '<table><tr><th>Aluno</th><th>Disciplina</th></tr>';
-      lista.forEach(item => {
-        html += `<tr><td>${item.aluno}</td><td>${item.disciplina}</td></tr>`;
+      html += '<table><tr><th>Aluno</th>';
+      const maxCols = Math.max(...Object.values(lista).map(arr => arr.length));
+      for (let i = 0; i < maxCols; i++) html += `<th>Disciplina ${i+1}</th>`;
+      html += '</tr>';
+
+      nomes.forEach(nome => {
+        html += `<tr><td>${nome}</td>`;
+        const disciplinas = lista[nome];
+        for (let i = 0; i < maxCols; i++) {
+          html += `<td>${disciplinas[i] || ''}</td>`;
+        }
+        html += '</tr>';
       });
+
       html += '</table>';
       document.getElementById('tabela-container').innerHTML = html;
-    }
-
-    async function gerarResumoGeral() {
-      document.getElementById('resumoModal').style.display = 'block';
-      document.getElementById('tituloModal').innerText = 'Resumo Geral das Médias';
-      const alunos = await fetch('alunos.json').then(r => r.json());
-      const medias = {};
-
-      for (let b = 1; b <= 4; b++) {
-        try {
-          const dados = await fetch(`dados${b}.json`).then(r => r.json());
-          for (const id in dados) {
-            if (!medias[id]) medias[id] = {};
-            for (const disc in dados[id]) {
-              const nota = parseFloat(dados[id][disc]?.notas?.[b - 1]);
-              if (!medias[id][disc]) medias[id][disc] = { soma: 0, count: 0 };
-              if (!isNaN(nota)) {
-                medias[id][disc].soma += nota;
-                medias[id][disc].count++;
-              }
-            }
-          }
-        } catch {}
-      }
-
-      let html = '';
-      for (const id in medias) {
-        const nome = alunos[id]?.nome || id;
-        let risco = 0;
-        for (const d in medias[id]) {
-          const m = medias[id][d].soma / medias[id][d].count;
-          if (m < 5) risco++;
-        }
-        const status = risco >= 4 ? '<span style="color:red"> 🛑 RISCO DE RETENÇÃO</span>' : '';
-        html += `<h3>${nome}${status}</h3><table><tr><th>Disciplina</th><th>Média</th><th>Status</th></tr>`;
-        for (const d in medias[id]) {
-          const { soma, count } = medias[id][d];
-          const media = soma / count;
-          const status = media < 5 ? '<span style="color:red">RISCO</span>' : '<span style="color:green">APROVADO</span>';
-          html += `<tr><td>${d}</td><td>${media.toFixed(2)}</td><td>${status}</td></tr>`;
-        }
-        html += '</table><br>';
-      }
-      document.getElementById('conteudoResumo').innerHTML = html;
-    }
-
-    function fecharModal() {
-      document.getElementById('resumoModal').style.display = 'none';
-    }
-
-    async function gerarListaRisco() {
-      await gerarResumoGeral();
-      const alunos = document.querySelectorAll('#conteudoResumo h3');
-      alunos.forEach(h3 => {
-        const risco = h3.innerHTML.includes('🛑');
-        const tabela = h3.nextElementSibling;
-        if (!risco && tabela) {
-          h3.style.display = 'none';
-          tabela.style.display = 'none';
-        }
-      });
-      document.getElementById('tituloModal').innerText = 'Alunos com Risco de Retenção (4 ou mais disciplinas com média < 5)';
     }
 
     document.getElementById('bimestre').addEventListener('change', e => carregarDados(e.target.value));
