@@ -118,6 +118,7 @@
         const disciplinas = new Set();
         const analise = {};
         const semNotas = {};
+        const riscoRetencao = {};
 
         for (const id in dados) {
           const nome = alunos[id]?.nome;
@@ -136,6 +137,8 @@
           const nome = alunos[id]?.nome;
           if (!nome || !isNaN(nome)) continue;
 
+          let notasBaixas = 0;
+
           for (const disc of disciplinas) {
             const notaStr = dados[id][disc]?.notas?.[bimestre - 1];
             const nota = parseFloat(notaStr);
@@ -147,12 +150,18 @@
               analise[disc].boas++;
             } else {
               analise[disc].ruins++;
+              notasBaixas++;
             }
+          }
+
+          if (notasBaixas >= 4) {
+            riscoRetencao[nome] = notasBaixas;
           }
         }
 
         atualizarGrafico(analise);
         gerarTabelaSemNotas(semNotas);
+        gerarTabelaRiscoRetencao(riscoRetencao);
       } catch (error) {
         document.getElementById('mensagem').textContent = 'Erro ao carregar os dados.';
         console.error(error);
@@ -206,6 +215,21 @@
 
       html += '</table>';
       document.getElementById('tabela-container').innerHTML = html;
+    }
+
+    function gerarTabelaRiscoRetencao(lista) {
+      const nomes = Object.keys(lista);
+      if (nomes.length === 0) return;
+
+      let html = '<h2>Alunos com Risco de Retenção</h2>';
+      html += '<table><tr><th>Aluno</th><th>🔴 Disciplinas com Nota < 5</th></tr>';
+
+      nomes.forEach(nome => {
+        html += `<tr><td>${nome}</td><td>${lista[nome]}</td></tr>`;
+      });
+
+      html += '</table>';
+      document.getElementById('tabela-container').innerHTML += html;
     }
 
     document.getElementById('bimestre').addEventListener('change', e => carregarDados(e.target.value));
