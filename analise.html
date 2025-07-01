@@ -128,9 +128,9 @@
 
   <!-- Modal -->
   <div id="resumoModal">
-    <h2>Resumo Geral das Médias (4 Bimestres)</h2>
+    <h2>Resumo Geral das Médias (até 4 Bimestres)</h2>
     <div id="conteudoResumo">Carregando...</div>
-    <button onclick="fecharModal()">Fechar</button>
+    <button onclick="document.getElementById('resumoModal').style.display='none'">Fechar</button>
   </div>
 
   <script>
@@ -282,7 +282,6 @@
 
     function gerarTabelas(notas, semNotas) {
       let html = '';
-
       const vermelhasPorAluno = {};
       notas.forEach(item => {
         if (!vermelhasPorAluno[item.aluno]) {
@@ -291,45 +290,25 @@
         vermelhasPorAluno[item.aluno].push(`${item.disciplina} (${item.nota})`);
       });
 
-      if (notas.length === 0) {
-        html += '<p><em>Nenhum aluno com nota vermelha neste bimestre.</em></p>';
-      } else {
-        html += '<h2>Alunos com Notas Vermelhas</h2>';
-        const max = Math.max(...Object.values(vermelhasPorAluno).map(a => a.length));
-        html += '<table><tr><th>Aluno</th>';
-        for (let i = 1; i <= max; i++) html += `<th>Nota ${i}</th>`;
-        html += '</tr>';
+      if (notas.length > 0) {
+        html += '<h2>Alunos com Notas Vermelhas</h2><table><tr><th>Aluno</th><th>Notas</th></tr>';
         for (const aluno in vermelhasPorAluno) {
-          const disciplinas = vermelhasPorAluno[aluno];
-          const destaque = disciplinas.length >= 4;
-          html += `<tr${destaque ? ' style="background-color: yellow;"' : ''}><td${destaque ? ' style="color:red; font-weight:bold;"' : ''}>${aluno}</td>`;
-          for (let i = 0; i < max; i++) html += `<td>${disciplinas[i] || ''}</td>`;
-          html += '</tr>';
+          const list = vermelhasPorAluno[aluno].join(', ');
+          html += `<tr><td>${aluno}</td><td>${list}</td></tr>`;
         }
         html += '</table>';
       }
 
-      const semNotaPorAluno = {};
-      semNotas.forEach(item => {
-        if (!semNotaPorAluno[item.aluno]) {
-          semNotaPorAluno[item.aluno] = [];
-        }
-        semNotaPorAluno[item.aluno].push(item.disciplina);
-      });
-
-      if (semNotas.length === 0) {
-        html += '<p><em>Todos os alunos têm notas lançadas.</em></p>';
-      } else {
-        html += '<h2>Alunos Sem Nota Lançada</h2>';
-        const max = Math.max(...Object.values(semNotaPorAluno).map(a => a.length));
-        html += '<table><tr><th>Aluno</th>';
-        for (let i = 1; i <= max; i++) html += `<th>Disciplina ${i}</th>`;
-        html += '</tr>';
+      if (semNotas.length > 0) {
+        html += '<h2>Alunos Sem Nota Lançada</h2><table><tr><th>Aluno</th><th>Disciplinas</th></tr>';
+        const semNotaPorAluno = {};
+        semNotas.forEach(item => {
+          if (!semNotaPorAluno[item.aluno]) semNotaPorAluno[item.aluno] = [];
+          semNotaPorAluno[item.aluno].push(item.disciplina);
+        });
         for (const aluno in semNotaPorAluno) {
-          const disciplinas = semNotaPorAluno[aluno];
-          html += `<tr><td>${aluno}</td>`;
-          for (let i = 0; i < max; i++) html += `<td>${disciplinas[i] || ''}</td>`;
-          html += '</tr>';
+          const list = semNotaPorAluno[aluno].join(', ');
+          html += `<tr><td>${aluno}</td><td>${list}</td></tr>`;
         }
         html += '</table>';
       }
@@ -346,19 +325,16 @@
         const alunos = await fetch('alunos.json').then(r => r.json());
         const bimestres = [1, 2, 3, 4];
         const dadosBimestres = [];
-        const bimestresDisponiveis = [];
-        const bimestresIndisponiveis = [];
+        const indisponiveis = [];
 
         for (const b of bimestres) {
           try {
             const resp = await fetch(`dados${b}.json`);
-            if (!resp.ok) throw new Error(`Bimestre ${b} indisponível`);
+            if (!resp.ok) throw new Error();
             const dados = await resp.json();
             dadosBimestres.push({ bimestre: b, dados });
-            bimestresDisponiveis.push(b);
-          } catch (err) {
-            console.warn(`dados${b}.json não disponível.`);
-            bimestresIndisponiveis.push(b);
+          } catch {
+            indisponiveis.push(b);
           }
         }
 
@@ -379,22 +355,32 @@
           }
         }
 
-        let html = '<table><tr><th>Aluno</th><th>Disciplina</th><th>Total</th><th>Média</th><th>Status</th></tr>';
-
+        let html = '';
         for (const id in medias) {
           const aluno = alunos[id]?.nome || `ID ${id}`;
+          let riscoContador = 0;
+          for (const disc in medias[id]) {
+            const media = medias[id][disc].soma / medias[id][disc].count;
+            if (media < 5) riscoContador++;
+          }
+          const alerta = riscoContador >= 4
+            ? ' <span style="color:red; font-weight:bold;">🛑 RISCO DE RETENÇÃO</span>'
+            : '';
+          html += `<h3>${aluno}${alerta}</h3>`;
+          html += '<table><tr><th>Disciplina</th><th>Total</th><th>Média</th><th>Status</th></tr>';
           for (const disc in medias[id]) {
             const { soma, count } = medias[id][disc];
-            const media = (soma / count).toFixed(2);
-            const risco = soma < 20 ? '<span style="color:red; font-weight:bold;">RISCO DE RETENÇÃO</span>' : '';
-            html += `<tr><td>${aluno}</td><td>${disc}</td><td>${soma.toFixed(1)}</td><td>${media}</td><td>${risco}</td></tr>`;
+            const media = soma / count;
+            const status = media < 5
+              ? '<span style="color:red; font-weight:bold;">RISCO DE RETENÇÃO</span>'
+              : '<span style="color:green; font-weight:bold;">APROVADO</span>';
+            html += `<tr><td>${disc}</td><td>${soma.toFixed(1)}</td><td>${media.toFixed(2)}</td><td>${status}</td></tr>`;
           }
+          html += '</table><br>';
         }
 
-        html += '</table>';
-
-        if (bimestresIndisponiveis.length > 0) {
-          html += `<p style="margin-top: 20px;"><strong>Bimestres ainda não concluídos:</strong> ${bimestresIndisponiveis.join(', ')}º Bimestre(s)</p>`;
+        if (indisponiveis.length > 0) {
+          html += `<p style="margin-top: 20px;"><strong>Bimestres ainda não concluídos:</strong> ${indisponiveis.join(', ')}º Bimestre(s)</p>`;
         }
 
         conteudo.innerHTML = html;
@@ -402,10 +388,6 @@
         conteudo.innerHTML = '<p>Erro ao carregar os dados.</p>';
         console.error(err);
       }
-    }
-
-    function fecharModal() {
-      document.getElementById('resumoModal').style.display = 'none';
     }
 
     document.getElementById('bimestre').addEventListener('change', e => {
@@ -416,6 +398,5 @@
 
     carregarDados(1);
   </script>
-
 </body>
 </html>
