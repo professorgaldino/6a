@@ -14,7 +14,6 @@
       color: #333;
       text-align: center;
     }
-
     header {
       background-color: white;
       padding: 20px;
@@ -24,12 +23,10 @@
       gap: 10px;
       flex-wrap: wrap;
     }
-
     .logo {
       width: 120px;
       height: auto;
     }
-
     .foto-aluno {
       width: 150px;
       height: 150px;
@@ -37,14 +34,12 @@
       object-fit: cover;
       border: 5px solid #2259f2;
     }
-
     .nome-aluno {
       font-size: 24px;
       font-weight: 600;
       margin-top: 10px;
       color: #2259f2;
     }
-
     .container {
       width: 90%;
       margin: 20px auto;
@@ -53,7 +48,6 @@
       border-radius: 10px;
       box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
     }
-
     table {
       width: 100%;
       border-collapse: collapse;
@@ -62,18 +56,15 @@
       border-radius: 10px;
       box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
     }
-
     th, td {
       border: 1px solid #ddd;
       padding: 10px;
       text-align: center;
     }
-
     th {
       background-color: #2259f2;
       color: white;
     }
-
     #navegacaoIds {
       display: flex;
       gap: 5px;
@@ -81,7 +72,6 @@
       justify-content: center;
       margin-top: 10px;
     }
-
     #navegacaoIds button {
       padding: 8px 12px;
       background-color: #eee;
@@ -92,25 +82,21 @@
       color: #2259f2;
       transition: background-color 0.3s, color 0.3s;
     }
-
     #navegacaoIds button:hover {
       background-color: #2259f2;
       color: white;
     }
-
     #navegacaoIds button.active {
       background-color: #2259f2;
       color: white;
       cursor: default;
     }
-
     #analiseFixo {
       position: fixed;
       top: 10px;
       right: 10px;
       z-index: 1000;
     }
-
     #analiseFixo select {
       padding: 8px 12px;
       font-size: 16px;
@@ -169,14 +155,37 @@
   </div>
 
   <script>
-    function getAlunoId() {
+    async function obterOuRedirecionarId() {
       const params = new URLSearchParams(window.location.search);
-      return params.get("id") || "2";
+      let id = params.get("id");
+
+      if (!id) {
+        try {
+          const response = await fetch('ids.json');
+          if (!response.ok) throw new Error("Erro ao carregar ids.json");
+          const ids = await response.json();
+          if (ids.length > 0) {
+            const primeiroId = ids[0];
+            const novaURL = new URL(window.location.href);
+            novaURL.searchParams.set("id", primeiroId);
+            window.location.href = novaURL.toString();
+          } else {
+            console.error("ids.json está vazio.");
+          }
+        } catch (erro) {
+          console.error("Erro ao obter ID inicial:", erro);
+        }
+      } else {
+        iniciarPagina(id);
+      }
     }
 
-    const alunoId = getAlunoId();
+    function iniciarPagina(alunoId) {
+      carregarNavegacao(alunoId);
+      buscarDados(alunoId);
+    }
 
-    async function carregarNavegacao() {
+    async function carregarNavegacao(alunoId) {
       try {
         const response = await fetch('ids.json');
         if (!response.ok) throw new Error('Erro ao carregar ids.json');
@@ -209,7 +218,7 @@
       }
     }
 
-    async function buscarDados() {
+    async function buscarDados(alunoId) {
       try {
         const bimestres = ["dados1.json", "dados2.json", "dados3.json", "dados4.json"];
         const dadosCompletos = {};
@@ -316,19 +325,17 @@
       }
     }
 
-    document.addEventListener('DOMContentLoaded', () => {
-      const seletor = document.getElementById('seletorSala');
-      seletor.addEventListener('change', () => {
-        const sala = seletor.value;
+    document.addEventListener("DOMContentLoaded", () => {
+      obterOuRedirecionarId();
+
+      document.getElementById("seletorSala").addEventListener("change", (e) => {
+        const sala = e.target.value;
         if (sala) {
           const url = `https://professorgaldino.github.io/${sala}/analise.html`;
-          window.open(url, '_blank');
+          window.open(url, "_blank");
         }
       });
     });
-
-    carregarNavegacao();
-    buscarDados();
   </script>
 </body>
 </html>
