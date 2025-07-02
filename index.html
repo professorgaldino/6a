@@ -18,10 +18,10 @@
       background-color: white;
       padding: 20px;
       display: flex;
-      justify-content: center;
+      flex-direction: column;
       align-items: center;
-      gap: 20px;
-      flex-wrap: wrap; /* para quebrar linha se precisar */
+      gap: 10px;
+      flex-wrap: wrap;
     }
     .logo {
       width: 120px;
@@ -65,14 +65,12 @@
       background-color: #2259f2;
       color: white;
     }
-    /* Estilo dos botões de navegação */
     #navegacaoIds {
       display: flex;
       gap: 5px;
       flex-wrap: wrap;
       justify-content: center;
       margin-top: 10px;
-      width: 100%;
     }
     #navegacaoIds button {
       padding: 8px 12px;
@@ -93,14 +91,59 @@
       color: white;
       cursor: default;
     }
+    #analiseContainer {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      margin-top: 10px;
+    }
+    #seletorSala {
+      padding: 8px;
+      border-radius: 5px;
+      font-size: 16px;
+    }
+    #btnAnalise {
+      padding: 10px 16px;
+      background-color: #28a745;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
   <header>
     <img src="logoescola.jpeg" alt="Logo da Escola" class="logo" />
     <img id="fotoAluno" src="" alt="Foto do Aluno" class="foto-aluno" />
-    <!-- Container para botões de navegação -->
+
     <nav id="navegacaoIds" aria-label="Navegação entre boletins"></nav>
+
+    <div id="analiseContainer">
+      <select id="seletorSala">
+        <option value="" disabled selected>Selecione a sala</option>
+        <option value="6a">6A</option>
+        <option value="6b">6B</option>
+        <option value="6c">6C</option>
+        <option value="7a">7A</option>
+        <option value="7b">7B</option>
+        <option value="7c">7C</option>
+        <option value="8a">8A</option>
+        <option value="8b">8B</option>
+        <option value="8c">8C</option>
+        <option value="9a">9A</option>
+        <option value="9b">9B</option>
+        <option value="9c">9C</option>
+        <option value="1a">1A</option>
+        <option value="1b">1B</option>
+        <option value="2a">2A</option>
+        <option value="3adm">3ADM</option>
+      </select>
+      <button id="btnAnalise">📊 Análise</button>
+    </div>
   </header>
 
   <h1 class="nome-aluno">Carregando nome...</h1>
@@ -121,7 +164,6 @@
   </div>
 
   <script>
-    // Pega o parâmetro id da URL, ou usa "2" como padrão
     function getAlunoId() {
       const params = new URLSearchParams(window.location.search);
       return params.get("id") || "2";
@@ -129,7 +171,6 @@
 
     const alunoId = getAlunoId();
 
-    // Função para criar botões de navegação conforme ids.json
     async function carregarNavegacao() {
       try {
         const response = await fetch('ids.json');
@@ -150,7 +191,6 @@
           }
 
           btn.addEventListener('click', () => {
-            // Atualiza URL para o id do aluno selecionado
             const url = new URL(window.location);
             url.searchParams.set('id', id);
             window.location.href = url.toString();
@@ -175,10 +215,8 @@
             if (!response.ok) throw new Error(`Arquivo ${bimestres[i]} não encontrado`);
             const data = await response.json();
 
-            // Tenta buscar o aluno direto na raiz
             let aluno = data[alunoId];
 
-            // Se não achar, procura em objetos aninhados
             if (!aluno) {
               for (const key in data) {
                 if (data[key][alunoId]) {
@@ -199,7 +237,6 @@
                 }
 
                 const entrada = aluno[disciplina];
-                // Usar a posição i para acessar o índice correto em notas/faltas
                 dadosCompletos[disciplina].notas[i] = entrada.notas?.[i] ?? "-";
                 dadosCompletos[disciplina].faltas[i] = entrada.faltas?.[i] ?? "-";
                 dadosCompletos[disciplina].faltas_acumuladas[i] = entrada.faltas_acumuladas ?? "-";
@@ -220,12 +257,12 @@
     function carregarBoletim(jsonData) {
       const boletim = document.getElementById("boletim");
       let tabelaHTML = `<tr>
-          <th>Disciplina</th>
-          <th>1º Bim - Nota</th><th>1º Bim - Faltas</th><th>1º Bim - Faltas Acumuladas</th>
-          <th>2º Bim - Nota</th><th>2º Bim - Faltas</th><th>2º Bim - Faltas Acumuladas</th>
-          <th>3º Bim - Nota</th><th>3º Bim - Faltas</th><th>3º Bim - Faltas Acumuladas</th>
-          <th>4º Bim - Nota</th><th>4º Bim - Faltas</th><th>4º Bim - Faltas Acumuladas</th>
-        </tr>`;
+        <th>Disciplina</th>
+        <th>1º Bim - Nota</th><th>1º Bim - Faltas</th><th>1º Bim - Faltas Acumuladas</th>
+        <th>2º Bim - Nota</th><th>2º Bim - Faltas</th><th>2º Bim - Faltas Acumuladas</th>
+        <th>3º Bim - Nota</th><th>3º Bim - Faltas</th><th>3º Bim - Faltas Acumuladas</th>
+        <th>4º Bim - Nota</th><th>4º Bim - Faltas</th><th>4º Bim - Faltas Acumuladas</th>
+      </tr>`;
 
       for (const disciplina in jsonData) {
         const dados = jsonData[disciplina];
@@ -240,15 +277,14 @@
 
       boletim.innerHTML = tabelaHTML;
 
-      // Estilização das notas após renderizar a tabela
       boletim.querySelectorAll("td.nota").forEach(celula => {
         const valor = celula.textContent.trim();
         if (valor === "-") {
-          celula.style.backgroundColor = "#e0d4f7"; // roxo claro
+          celula.style.backgroundColor = "#e0d4f7";
         } else if (!isNaN(valor)) {
           const numero = parseFloat(valor);
           if (numero < 5) {
-            celula.style.color = "#ff4c4c"; // vermelho
+            celula.style.color = "#ff4c4c";
             celula.style.fontWeight = "bold";
           }
         }
@@ -275,7 +311,21 @@
       }
     }
 
-    // Executa carregamento da navegação e dados
+    document.addEventListener('DOMContentLoaded', () => {
+      const seletor = document.getElementById('seletorSala');
+      const btnAnalise = document.getElementById('btnAnalise');
+
+      btnAnalise.addEventListener('click', () => {
+        const sala = seletor.value;
+        if (!sala) {
+          alert("Por favor, selecione uma sala.");
+          return;
+        }
+        const url = `https://professorgaldino.github.io/${sala}/analise.html`;
+        window.open(url, '_blank');
+      });
+    });
+
     carregarNavegacao();
     buscarDados();
   </script>
