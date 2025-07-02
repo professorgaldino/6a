@@ -1,194 +1,283 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Boletim Escolar</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
   <style>
-    * {
-      box-sizing: border-box;
-    }
-
     body {
+      font-family: 'Poppins', sans-serif;
       margin: 0;
       padding: 0;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: #f0f2f5;
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
+      background-color: #f5f5f5;
+      color: #333;
+      text-align: center;
     }
-
-    .nav {
+    header {
+      background-color: white;
+      padding: 20px;
       display: flex;
-      justify-content: space-between;
+      justify-content: center;
       align-items: center;
-      background: #007bff;
-      color: white;
-      padding: 12px 24px;
-      font-size: 18px;
+      gap: 20px;
+      flex-wrap: wrap; /* para quebrar linha se precisar */
     }
-
-    .nav button {
-      background: #fff;
-      border: none;
-      color: #007bff;
-      font-size: 16px;
-      font-weight: bold;
-      border-radius: 8px;
-      padding: 6px 14px;
-      cursor: pointer;
-      transition: 0.2s ease-in-out;
+    .logo {
+      width: 120px;
+      height: auto;
     }
-
-    .nav button:hover {
-      background: #e9ecef;
+    .foto-aluno {
+      width: 150px;
+      height: 150px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 5px solid #2259f2;
     }
-
-    .page-controls {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .page-number {
-      font-weight: bold;
-      background: white;
-      color: #007bff;
-      padding: 6px 12px;
-      border-radius: 8px;
-    }
-
-    .page-selector {
+    .nome-aluno {
+      font-size: 24px;
+      font-weight: 600;
       margin-top: 10px;
+      color: #2259f2;
+    }
+    .container {
+      width: 90%;
+      margin: 20px auto;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 10px;
+      text-align: center;
+    }
+    th {
+      background-color: #2259f2;
+      color: white;
+    }
+    /* Estilo dos botões de navegação */
+    #navegacaoIds {
       display: flex;
+      gap: 5px;
       flex-wrap: wrap;
       justify-content: center;
-      gap: 10px;
-      padding: 10px;
-    }
-
-    .page-selector button {
-      background: #fff;
-      border: 2px solid #007bff;
-      color: #007bff;
-      font-size: 16px;
-      padding: 5px 10px;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: 0.2s ease-in-out;
-    }
-
-    .page-selector button:hover {
-      background: #007bff;
-      color: white;
-    }
-
-    iframe {
-      flex: 1;
-      border: none;
+      margin-top: 10px;
       width: 100%;
     }
-
-    .analysis-button {
-      background: #007bff;
-      color: white;
-      border: none;
-      padding: 10px 20px;
-      font-size: 16px;
-      font-weight: bold;
-      border-radius: 8px;
+    #navegacaoIds button {
+      padding: 8px 12px;
+      background-color: #eee;
+      border: 1px solid #ccc;
+      border-radius: 5px;
       cursor: pointer;
-      transition: 0.2s ease-in-out;
+      font-weight: 600;
+      color: #2259f2;
+      transition: background-color 0.3s, color 0.3s;
     }
-
-    .analysis-button:hover {
-      background: #e9ecef;
+    #navegacaoIds button:hover {
+      background-color: #2259f2;
+      color: white;
     }
-
+    #navegacaoIds button.active {
+      background-color: #2259f2;
+      color: white;
+      cursor: default;
+    }
   </style>
 </head>
 <body>
+  <header>
+    <img src="logoescola.jpeg" alt="Logo da Escola" class="logo" />
+    <img id="fotoAluno" src="" alt="Foto do Aluno" class="foto-aluno" />
+    <!-- Container para botões de navegação -->
+    <nav id="navegacaoIds" aria-label="Navegação entre boletins"></nav>
+  </header>
 
-  <div class="nav">
-    <button onclick="window.location.href='https://professorgaldino.github.io/sitetv/sala.html'">← Voltar para as salas</button>
+  <h1 class="nome-aluno">Carregando nome...</h1>
 
-    <div class="page-controls">
-      <button onclick="goPrev()">← Anterior</button>
-      <span class="page-number" id="page-number">Página: 1</span>
-      <button onclick="goNext()">Próxima →</button>
-      <button onclick="window.location.href='https://professorgaldino.github.io/6a/analise.html'" class="analysis-button">
-        📊 Análise
-      </button>
-    </div>
-
-    <button onclick="window.location.href='outros.html'">Verificar outras situações →</button>
+  <div class="container">
+    <h2>Desempenho Bimestral</h2>
+    <table id="boletim"></table>
   </div>
 
-  <div class="page-selector" id="page-selector"></div>
-
-  <iframe id="viewer" src=""></iframe>
+  <div class="container">
+    <h2>Ocorrências</h2>
+    <table>
+      <tr><th>Data</th><th>Descrição</th></tr>
+      <tr><td></td><td></td></tr>
+      <tr><td></td><td></td></tr>
+      <tr><td></td><td></td></tr>
+    </table>
+  </div>
 
   <script>
-    const pages = [
-      "a1.html", "a2.html", "a4.html", "a5.html", "a6.html", "a8.html", "a11.html", "a13.html", "a14.html",
-      "a16.html", "a17.html", "a18.html", "a20.html", "a23.html", "a25.html", "a26.html", "a27.html", "a29.html",
-      "a31.html", "a33.html", "a35.html", "a37.html", "a40.html", "a41.html", "a42.html", "a43.html", "a44.html",
-      "a45.html", "a48.html"
-    ];
+    // Pega o parâmetro id da URL, ou usa "2" como padrão
+    function getAlunoId() {
+      const params = new URLSearchParams(window.location.search);
+      return params.get("id") || "2";
+    }
 
-    let currentIndex = 0;
+    const alunoId = getAlunoId();
 
-    const viewer = document.getElementById("viewer");
-    const pageNumber = document.getElementById("page-number");
-    const pageSelector = document.getElementById("page-selector");
+    // Função para criar botões de navegação conforme ids.json
+    async function carregarNavegacao() {
+      try {
+        const response = await fetch('ids.json');
+        if (!response.ok) throw new Error('Erro ao carregar ids.json');
+        const ids = await response.json();
 
-    const updateViewer = () => {
-      const currentPage = pages[currentIndex];
-      const pageNum = currentPage.match(/\d+/)?.[0] || "?";
-      viewer.src = currentPage;
-      pageNumber.textContent = "Página: " + pageNum;
-      highlightCurrentButton();
-    };
+        const nav = document.getElementById('navegacaoIds');
+        nav.innerHTML = '';
 
-    const goPrev = () => {
-      if (currentIndex > 0) {
-        currentIndex--;
-        updateViewer();
-      }
-    };
+        ids.forEach(id => {
+          const btn = document.createElement('button');
+          btn.textContent = id;
+          btn.dataset.id = id;
 
-    const goNext = () => {
-      if (currentIndex < pages.length - 1) {
-        currentIndex++;
-        updateViewer();
-      }
-    };
+          if (String(id) === alunoId) {
+            btn.classList.add('active');
+            btn.disabled = true;
+          }
 
-    const highlightCurrentButton = () => {
-      const buttons = pageSelector.querySelectorAll("button");
-      buttons.forEach((btn, idx) => {
-        btn.style.background = idx === currentIndex ? "#007bff" : "#fff";
-        btn.style.color = idx === currentIndex ? "#fff" : "#007bff";
-      });
-    };
+          btn.addEventListener('click', () => {
+            // Atualiza URL para o id do aluno selecionado
+            const url = new URL(window.location);
+            url.searchParams.set('id', id);
+            window.location.href = url.toString();
+          });
 
-    const createPageButtons = () => {
-      pages.forEach((page, index) => {
-        const pageNum = page.match(/\d+/)?.[0] || "?";
-        const button = document.createElement("button");
-        button.textContent = pageNum;
-        button.addEventListener("click", () => {
-          currentIndex = index;
-          updateViewer();
+          nav.appendChild(btn);
         });
-        pageSelector.appendChild(button);
+
+      } catch (error) {
+        console.error('Erro ao carregar navegação:', error);
+      }
+    }
+
+    async function buscarDados() {
+      try {
+        const bimestres = ["dados1.json", "dados2.json", "dados3.json", "dados4.json"];
+        const dadosCompletos = {};
+
+        for (let i = 0; i < bimestres.length; i++) {
+          try {
+            const response = await fetch(bimestres[i]);
+            if (!response.ok) throw new Error(`Arquivo ${bimestres[i]} não encontrado`);
+            const data = await response.json();
+
+            // Tenta buscar o aluno direto na raiz
+            let aluno = data[alunoId];
+
+            // Se não achar, procura em objetos aninhados
+            if (!aluno) {
+              for (const key in data) {
+                if (data[key][alunoId]) {
+                  aluno = data[key][alunoId];
+                  break;
+                }
+              }
+            }
+
+            if (aluno) {
+              for (const disciplina in aluno) {
+                if (!dadosCompletos[disciplina]) {
+                  dadosCompletos[disciplina] = {
+                    notas: ["-", "-", "-", "-"],
+                    faltas: ["-", "-", "-", "-"],
+                    faltas_acumuladas: ["-", "-", "-", "-"]
+                  };
+                }
+
+                const entrada = aluno[disciplina];
+                // Usar a posição i para acessar o índice correto em notas/faltas
+                dadosCompletos[disciplina].notas[i] = entrada.notas?.[i] ?? "-";
+                dadosCompletos[disciplina].faltas[i] = entrada.faltas?.[i] ?? "-";
+                dadosCompletos[disciplina].faltas_acumuladas[i] = entrada.faltas_acumuladas ?? "-";
+              }
+            }
+          } catch (error) {
+            console.warn(error.message);
+          }
+        }
+
+        carregarBoletim(dadosCompletos);
+        carregarDadosAluno(alunoId);
+      } catch (error) {
+        console.error("Erro ao buscar os dados:", error);
+      }
+    }
+
+    function carregarBoletim(jsonData) {
+      const boletim = document.getElementById("boletim");
+      let tabelaHTML = `<tr>
+          <th>Disciplina</th>
+          <th>1º Bim - Nota</th><th>1º Bim - Faltas</th><th>1º Bim - Faltas Acumuladas</th>
+          <th>2º Bim - Nota</th><th>2º Bim - Faltas</th><th>2º Bim - Faltas Acumuladas</th>
+          <th>3º Bim - Nota</th><th>3º Bim - Faltas</th><th>3º Bim - Faltas Acumuladas</th>
+          <th>4º Bim - Nota</th><th>4º Bim - Faltas</th><th>4º Bim - Faltas Acumuladas</th>
+        </tr>`;
+
+      for (const disciplina in jsonData) {
+        const dados = jsonData[disciplina];
+        tabelaHTML += `<tr>
+          <td>${disciplina}</td>
+          <td class="nota">${dados.notas[0]}</td><td>${dados.faltas[0]}</td><td>${dados.faltas_acumuladas[0]}</td>
+          <td class="nota">${dados.notas[1]}</td><td>${dados.faltas[1]}</td><td>${dados.faltas_acumuladas[1]}</td>
+          <td class="nota">${dados.notas[2]}</td><td>${dados.faltas[2]}</td><td>${dados.faltas_acumuladas[2]}</td>
+          <td class="nota">${dados.notas[3]}</td><td>${dados.faltas[3]}</td><td>${dados.faltas_acumuladas[3]}</td>
+        </tr>`;
+      }
+
+      boletim.innerHTML = tabelaHTML;
+
+      // Estilização das notas após renderizar a tabela
+      boletim.querySelectorAll("td.nota").forEach(celula => {
+        const valor = celula.textContent.trim();
+        if (valor === "-") {
+          celula.style.backgroundColor = "#e0d4f7"; // roxo claro
+        } else if (!isNaN(valor)) {
+          const numero = parseFloat(valor);
+          if (numero < 5) {
+            celula.style.color = "#ff4c4c"; // vermelho
+            celula.style.fontWeight = "bold";
+          }
+        }
       });
-    };
+    }
 
-    createPageButtons();
-    updateViewer();
+    async function carregarDadosAluno(id) {
+      try {
+        const response = await fetch("alunos.json");
+        if (!response.ok) throw new Error("Erro ao carregar alunos.json");
+
+        const dadosAlunos = await response.json();
+        const aluno = dadosAlunos[id];
+
+        if (aluno) {
+          document.querySelector(".nome-aluno").textContent = aluno.nome;
+          document.getElementById("fotoAluno").src = aluno.foto;
+          document.getElementById("fotoAluno").alt = "Foto de " + aluno.nome;
+        } else {
+          console.warn("Aluno não encontrado no JSON de nomes.");
+        }
+      } catch (e) {
+        console.error("Erro ao carregar nome/foto do aluno:", e);
+      }
+    }
+
+    // Executa carregamento da navegação e dados
+    carregarNavegacao();
+    buscarDados();
   </script>
-
 </body>
 </html>
